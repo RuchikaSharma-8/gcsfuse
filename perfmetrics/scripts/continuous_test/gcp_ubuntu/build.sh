@@ -51,15 +51,15 @@ GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-
 BUCKET_NAME=periodic-perf-experiments
 MOUNT_POINT=gcs
 # The VM will itself exit if the gcsfuse mount fails.
-gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
+#gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
+#
+## Executing perf tests
+#chmod +x run_load_test_and_fetch_metrics.sh
+#./run_load_test_and_fetch_metrics.sh
+#
+#sudo unmount $MOUNT_POINT
 
-# Executing perf tests
-chmod +x run_load_test_and_fetch_metrics.sh
-./run_load_test_and_fetch_metrics.sh
-
-sudo unmount $MOUNT_POINT
-
-GCSFUSE_FLAGS_SUBSET="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library"
+GCSFUSE_FLAGS_SUBSET=""
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
