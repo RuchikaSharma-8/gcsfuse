@@ -59,7 +59,7 @@ MOUNT_POINT=gcs
 #
 #sudo unmount $MOUNT_POINT
 
-GCSFUSE_FLAGS_SUBSET="--implicit-dirs --enable-storage-client-library 100 --max-conns-per-host"
+GCSFUSE_FLAGS_SUBSET="--implicit-dirs --enable-storage-client-library --max-conns-per-host 100"
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
