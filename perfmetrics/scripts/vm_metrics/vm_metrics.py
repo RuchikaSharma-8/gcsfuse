@@ -28,13 +28,13 @@ from google.cloud import monitoring_v3
 from gsheet import gsheet
 from typing import List
 
-PROJECT_NAME = 'projects/gcs-intern-project-2023'
+PROJECT_NAME = 'projects/gcsfuse-intern-project-2023'
 CPU_UTI_METRIC_TYPE = 'compute.googleapis.com/instance/cpu/utilization'
 RECEIVED_BYTES_COUNT_METRIC_TYPE = 'compute.googleapis.com/instance/network/received_bytes_count'
 OPS_LATENCY_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_latency'
 READ_BYTES_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/gcs/read_bytes_count'
 OPS_ERROR_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_error_count'
-# REQUEST_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/gcs/request_count'
+REQUEST_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/gcs/request_count'
 
 @dataclasses.dataclass
 class MetricPoint:
@@ -78,33 +78,46 @@ OPS_ERROR_COUNT = Metric(
     extra_filter=OPS_ERROR_COUNT_FILTER,
     reducer='REDUCE_SUM',
     group_fields=['metric.labels'])
-#
-# REQUEST_COUNT_LIST_OBJECT = Metric(
-#     metric_type=REQUEST_COUNT_METRIC_TYPE,
-#     factor=1,
-#     aligner='ALIGN_DELTA',
-#     extra_filter='metric.labels.fs_op == "ListObjects"',
-#     reducer='REDUCE_SUM',
-#     group_fields=['metric.labels'])
-# )
-#
-# REQUEST_COUNT_LIST_OBJECT = Metric(
-# metric_type=REQUEST_COUNT_METRIC_TYPE,
-# factor=1,
-# aligner='ALIGN_DELTA',
-# extra_filter='metric.labels.fs_op == "ListObjects"',
-# reducer='REDUCE_SUM',
-# group_fields=['metric.labels'])
-# )
+
+REQUEST_COUNT_LIST_OBJECT = Metric(
+    metric_type=REQUEST_COUNT_METRIC_TYPE,
+    factor=1,
+    aligner='ALIGN_DELTA',
+    extra_filter='metric.labels.fs_op == "ListObjects"',
+    reducer='REDUCE_SUM',
+    group_fields=['metric.labels'])
+
+REQUEST_COUNT_NEW_READER = Metric(
+    metric_type=REQUEST_COUNT_METRIC_TYPE,
+    factor=1,
+    aligner='ALIGN_DELTA',
+    extra_filter='metric.labels.fs_op == "NewReader"',
+    reducer='REDUCE_SUM',
+    group_fields=['metric.labels'])
+
+REQUEST_COUNT_CREATE_OBJECT = Metric(
+    metric_type=REQUEST_COUNT_METRIC_TYPE,
+    factor=1,
+    aligner='ALIGN_DELTA',
+    extra_filter='metric.labels.fs_op == "CreateObject"',
+    reducer='REDUCE_SUM',
+    group_fields=['metric.labels'])
+
+REQUEST_COUNT_STAT_OBJECT = Metric(
+    metric_type=REQUEST_COUNT_METRIC_TYPE,
+    factor=1,
+    aligner='ALIGN_DELTA',
+    extra_filter='metric.labels.fs_op == "StatObject"',
+    reducer='REDUCE_SUM',
+    group_fields=['metric.labels'])
 
 METRICS_LIST = [
     CPU_UTI_PEAK, CPU_UTI_MEAN, REC_BYTES_PEAK, REC_BYTES_MEAN,
-    READ_BYTES_COUNT, OPS_ERROR_COUNT
+    READ_BYTES_COUNT, OPS_ERROR_COUNT, REQUEST_COUNT_LIST_OBJECT,
+    REQUEST_COUNT_NEW_READER, REQUEST_COUNT_CREATE_OBJECT,
+    REQUEST_COUNT_STAT_OBJECT,
 ]
 
-# REQUEST_COUNT_LIST_OBJECT,
-# REQUEST_COUNT_NEW_READER, REQUEST_COUNT_CREATE_OBJECT,
-# REQUEST_COUNT_STAT_OBJECT,
 class NoValuesError(Exception):
   """API response values are missing."""
 
