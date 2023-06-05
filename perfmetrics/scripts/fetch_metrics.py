@@ -15,7 +15,6 @@ PERIOD_SEC = 120
 FIO_WORKSHEET_NAME = 'fio_metrics'
 VM_WORKSHEET_NAME = 'vm_metrics'
 
-
 def _parse_arguments(argv):
   """Parses the arguments provided to the script via command line.
 
@@ -45,7 +44,7 @@ def _parse_arguments(argv):
 
 if __name__ == '__main__':
   argv = sys.argv
-
+  print(INSTANCE)
   fio_metrics_obj = fio_metrics.FioMetrics()
   print('Getting fio metrics...')
 
@@ -59,7 +58,7 @@ if __name__ == '__main__':
   print('Waiting for 360 seconds for metrics to be updated on VM...')
   # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
   # So, waiting for 360 seconds to ensure the returned metrics are not empty.
-  # Intermittenly custom metrics are not available after 240 seconds, hence
+  # Intermittently custom metrics are not available after 240 seconds, hence
   # waiting for 360 secs instead of 240 secs
   time.sleep(360)
 
