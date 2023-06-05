@@ -246,9 +246,9 @@ class VmMetrics:
       return [MetricPoint(0, 0, 0) for i in range(int((end_time_sec-start_time_sec)/period)+1)]
 
     # Metrics data for metrics other that OPS_ERROR_COUNT_DATA should not be empty:
-    # if (metrics_data == []):
-    #   raise NoValuesError('No values were retrieved from the call for ' +
-    #                       metric.metric_type)
+    if (metrics_data == []):
+      raise NoValuesError('No values were retrieved from the call for ' +
+                          metric.metric_type)
 
     return metrics_data
   
