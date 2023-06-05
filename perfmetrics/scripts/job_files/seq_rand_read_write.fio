@@ -35,21 +35,4 @@ filesize=256k
 rw=write
 numjobs=40
 
-[3_thread]
-stonewall
-startdelay=1640
-bs=16k
-directory=gcs/256kb
-filesize=256k
-rw=randread
-numjobs=40
-
-[4_thread]
-stonewall
-startdelay=1830
-bs=16k
-directory=gcs/256kb
-filesize=256k
-rw=randwrite
-numjobs=40
 
