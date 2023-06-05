@@ -28,14 +28,13 @@ from google.cloud import monitoring_v3
 from gsheet import gsheet
 from typing import List
 
-PROJECT_NAME = 'projects/gcsfuse-intern-project-2023'
+PROJECT_NAME = 'projects/gcs-fuse-test-ml'
 CPU_UTI_METRIC_TYPE = 'compute.googleapis.com/instance/cpu/utilization'
 RECEIVED_BYTES_COUNT_METRIC_TYPE = 'compute.googleapis.com/instance/network/received_bytes_count'
 OPS_LATENCY_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_latency'
 READ_BYTES_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/gcs/read_bytes_count'
 OPS_ERROR_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_error_count'
 
-# appengine.googleapis.com/system/memory/usage
 @dataclasses.dataclass
 class MetricPoint:
   value: float
@@ -93,7 +92,7 @@ def _parse_metric_value_by_type(value, value_type) -> float:
 
     Args:
       value (object): The value object from API response
-      value_type (int) : Integer representing the value type of the object, refer 
+      value_type (int) : Integer representing the value type of the object, refer
                         https://cloud.google.com/monitoring/api/ref_v3/rest/v3/TypedValue.
   """
   if value_type == 1:
@@ -121,12 +120,12 @@ def _get_metric_filter(type, metric_type, instance, extra_filter):
     metric_filter = (
         'metric.type = "{metric_type}" AND metric.label.instance_name '
         '={instance_name}').format(
-            metric_type=metric_type, instance_name=instance)
+        metric_type=metric_type, instance_name=instance)
   elif (type == 'custom'):
     metric_filter = (
         'metric.type = "{metric_type}" AND metric.labels.opencensus_task = '
         'ends_with("{instance_name}")').format(
-            metric_type=metric_type, instance_name=instance)
+        metric_type=metric_type, instance_name=instance)
 
   if (extra_filter == ''):
     return metric_filter
@@ -216,7 +215,7 @@ class VmMetrics:
           'view': monitoring_v3.ListTimeSeriesRequest.TimeSeriesView.FULL,
           'aggregation': aggregation,
       })
-      
+
     except:
       raise GoogleAPICallError(('The request for API response of {} failed.'
                                 ).format(metric.metric_type))
@@ -224,7 +223,7 @@ class VmMetrics:
     return metrics_response
 
   def _get_metrics(self, start_time_sec, end_time_sec, instance, period,
-                   metric):
+      metric):
     """Returns the MetricPoint list for requested metric type.
 
     Args:
@@ -251,7 +250,7 @@ class VmMetrics:
                           metric.metric_type)
 
     return metrics_data
-  
+
   def _add_new_metric_using_test_type(self, test_type):
     """Creates a copy of METRICS_LIST and appends new Metric objects to it.
 
@@ -262,9 +261,9 @@ class VmMetrics:
     """
     # Getting the fs_op type from test_type:
     if test_type == 'read' or test_type == 'randread':
-        fs_op = 'ReadFile'
+      fs_op = 'ReadFile'
     elif test_type == 'write' or test_type == 'randwrite':
-        fs_op = 'WriteFile'
+      fs_op = 'WriteFile'
 
     updated_metrics_list = list(METRICS_LIST)
 
@@ -287,7 +286,7 @@ class VmMetrics:
       start_time_sec (int): Epoch seconds
       end_time_sec (int): Epoch seconds
       instance (str): VM instance
-      period (float): Period over which the values are taken 
+      period (float): Period over which the values are taken
       test_type(str): The type of load test for which metrics are taken
 
     Returns:
@@ -296,7 +295,7 @@ class VmMetrics:
       OPS_MEAN_LATENCY]]
     """
     self._validate_start_end_times(start_time_sec, end_time_sec)
-    
+
     # Getting updated metrics list:
     updated_metrics_list = self._add_new_metric_using_test_type(test_type)
 
@@ -318,8 +317,8 @@ class VmMetrics:
     return metrics_data
 
   def fetch_metrics_and_write_to_google_sheet(self, start_time_sec,
-                                              end_time_sec, instance, period,
-                                              test_type, worksheet_name):
+      end_time_sec, instance, period,
+      test_type, worksheet_name):
     """Fetches the metrics data for all types and writes to a google sheet.
 
     Args:
@@ -332,10 +331,8 @@ class VmMetrics:
     Returns:
       None
     """
-    print("hey1")
     self._validate_start_end_times(start_time_sec, end_time_sec)
 
-    print("hey2")
     # Getting metrics data:
     metrics_data = self.fetch_metrics(start_time_sec, end_time_sec, instance,
                                       period, test_type)
