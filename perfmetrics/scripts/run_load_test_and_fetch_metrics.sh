@@ -1,5 +1,14 @@
 #!/bin/bash
 set -e
+echo "Mounting gcs bucket"
+mkdir -p gcs
+LOG_FILE=$1
+GCSFUSE_FLAGS=$2
+BUCKET_NAME=periodic-perf-experiments
+MOUNT_POINT=gcs
+# The VM will itself exit if the gcsfuse mount fails.
+gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
+
 echo Print the time when FIO tests start
 date
 echo Running fio test..
@@ -16,3 +25,5 @@ echo Fetching results..
 #else
   #python3 fetch_metrics.py fio-output.json --upload
 #fi
+
+sudo unmount $MOUNT_POINT

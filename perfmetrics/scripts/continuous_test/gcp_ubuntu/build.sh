@@ -45,22 +45,15 @@ sudo dpkg -i $HOME/release/packages/gcsfuse_${GCSFUSE_VERSION}_amd64.deb
 cd "./perfmetrics/scripts/"
 echo "Mounting gcs bucket"
 mkdir -p gcs
-LOG_FILE=gcsfuse-logs.txt
+LOG_FILE_PERIODIC_PERF_TESTS=gcsfuse-logs.txt
 GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 
-BUCKET_NAME=periodic-perf-experiments
-MOUNT_POINT=gcs
-# The VM will itself exit if the gcsfuse mount fails.
-gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
-#
 ## Executing perf tests
-chmod +x run_load_test_and_fetch_metrics.sh
+chmod +x run_load_test_and_fetch_metrics.sh $LOG_FILE_PERIODIC_PERF_TESTS "$GCSFUSE_FLAGS"
 ./run_load_test_and_fetch_metrics.sh
-#
-sudo unmount $MOUNT_POINT
 
-GCSFUSE_FLAGS_SUBSET="--implicit-dirs --enable-storage-client-library --max-conns-per-host 100"
+LOG_FILE_LIST_TESTS=gcsfuse-list-tests-logs.txt
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
-./run_ls_benchmark.sh "$GCSFUSE_FLAGS_SUBSET"
+./run_ls_benchmark.sh $LOG_FILE_LIST_TESTS "$GCSFUSE_FLAGS"

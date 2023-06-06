@@ -9,7 +9,7 @@ and also through which multiple tests of different configurations can be
 performed in a single run.
 
 Typical usage example:
-  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --command COMMAND config_file gcsfuse_flags
+  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file
 
   Flag -h: Typical help interface of the script.
   Flag --keep_files: Do not delete the generated directory structure from the
@@ -17,6 +17,7 @@ Typical usage example:
   Flag --upload: Uploads the results of the test to the Google Sheet.
   Flag --num_samples: Runs each test for NUM_SAMPLES times.
   Flag --message: Takes input a message string, which describes/titles the test.
+  Flag --gcsfuse_flags (required): GCSFUSE flags with which the test bucket will be mounted.
   Flag --command (required): Takes a input a string, which is the command to run
                              the tests on.
   config_file (required): Path to the JSON config file which contains the
@@ -450,10 +451,9 @@ def _parse_arguments(argv):
   )
   parser.add_argument(
       '--gcsfuse_flags',
-      help='Gcsfuse flags for mounting the bucket',
+      help='Gcsfuse flags for mounting the bucket. Example set of flags - "--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-file-tests-logs.txt --log-format \"text\" --stackdriver-export-interval=30s"',
       action='store',
       nargs=1,
-      default=['gcsfuse --implicit-dirs --enable-storage-client-library --max-conns-per-host 100'],
       required=True,
   )
   # Ignoring the first parameter, as it is the path of this python
@@ -488,7 +488,7 @@ if __name__ == '__main__':
   if len(argv) < 4:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 listing_benchmark.py --gcsfuse_flags GCSFUSE_FLAGS [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --command COMMAND config_file ')
+                    'python3 listing_benchmark.py [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file ')
 
   args = _parse_arguments(argv)
 
