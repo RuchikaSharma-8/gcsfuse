@@ -46,14 +46,16 @@ cd "./perfmetrics/scripts/"
 echo "Mounting gcs bucket"
 mkdir -p gcs
 LOG_FILE_PERIODIC_PERF_TESTS=gcsfuse-logs.txt
-GCSFUSE_FLAGS_PERIODIC_PERF_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE_PERIODIC_PERF_TESTS --log-format \"text\" --stackdriver-export-interval=30s"
+LOG_FILE="$LOG_FILE_PERIODIC_PERF_TESTS"
+GCSFUSE_FLAGS_PERIODIC_PERF_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 
 ## Executing perf tests
 chmod +x run_load_test_and_fetch_metrics.sh
-#./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS"
+./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS"
 
 LOG_FILE_LIST_TESTS=gcsfuse-list-tests-logs.txt
-GCSFUSE_FLAGS_LIST_TESTS="--implicit-dirs 100 --max-conns-per-host --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE_LIST_TESTS --log-format \"text\" --stackdriver-export-interval=30s"
+LOG_FILE="$LOG_FILE_LIST_TESTS"
+GCSFUSE_FLAGS_LIST_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
