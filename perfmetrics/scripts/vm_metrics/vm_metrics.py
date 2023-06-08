@@ -116,6 +116,10 @@ METRICS_LIST = [
     READ_BYTES_COUNT, OPS_ERROR_COUNT
 ]
 
+METRICS_LIST_SUBSET = [
+    CPU_UTI_PEAK, CPU_UTI_MEAN
+]
+
 # READ_BYTES_COUNT, OPS_ERROR_COUNT, REQUEST_COUNT_LIST_OBJECT,
 # REQUEST_COUNT_NEW_READER, REQUEST_COUNT_CREATE_OBJECT,
 # REQUEST_COUNT_STAT_OBJECT,
@@ -334,7 +338,10 @@ class VmMetrics:
 
     # Getting updated metrics list:
     #updated_metrics_list = self._add_new_metric_using_test_type(test_type)
+
     updated_metrics_list = METRICS_LIST
+    if test_type == 'list':
+      updated_metrics_list = METRICS_LIST_SUBSET
     # Extracting MetricPoint list for every metric in the updated_metrics_list:
     for metric in updated_metrics_list:
       metric.metric_point_list = self._get_metrics(start_time_sec, end_time_sec,

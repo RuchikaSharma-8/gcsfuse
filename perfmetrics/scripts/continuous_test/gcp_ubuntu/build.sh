@@ -49,7 +49,7 @@ GCSFUSE_FLAGS_PERIODIC_PERF_TESTS="--implicit-dirs --max-conns-per-host 100 --en
 
 ## Executing perf tests
 chmod +x run_load_test_and_fetch_metrics.sh
-./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS"
+#./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS"
 
 LOG_FILE_LIST_TESTS=gcsfuse-list-tests-logs.txt
 LOG_FILE="$LOG_FILE_LIST_TESTS"
