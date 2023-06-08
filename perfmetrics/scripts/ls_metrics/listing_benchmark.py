@@ -182,8 +182,8 @@ def _record_time_of_operation(command, path, num_samples) -> list:
     A list containing the latencies of operations in milisecond.
   """
 
-  result_list = [][3]
-  time_list = [3]
+  result_list= []
+  time_list = []
   for _ in range(num_samples):
     start_time_sec = time.time()
     subprocess.call('{} {}'.format(command, path), shell=True,
