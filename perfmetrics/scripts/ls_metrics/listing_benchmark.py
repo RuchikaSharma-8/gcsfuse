@@ -190,9 +190,9 @@ def _record_time_of_operation(command, path, num_samples) -> list:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)
     end_time_sec = time.time()
-    time_list[0] = start_time_sec
-    time_list[1] = end_time_sec
-    time_list[2] = (end_time_sec-start_time_sec)*1000
+    time_list.append(start_time_sec)
+    time_list.append(end_time_sec)
+    time_list.append(end_time_sec-start_time_sec)*1000)
     result_list.append(time_list)
   return result_list
 
