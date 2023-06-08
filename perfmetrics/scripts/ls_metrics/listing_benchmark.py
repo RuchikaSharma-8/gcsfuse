@@ -183,8 +183,9 @@ def _record_time_of_operation(command, path, num_samples) -> list:
   """
 
   result_list= []
-  time_list = []
+  start_and_end_time_sec_list = []
   for _ in range(num_samples):
+    time_list = []
     start_time_sec = time.time()
     subprocess.call('{} {}'.format(command, path), shell=True,
                     stdout=subprocess.DEVNULL,
@@ -192,9 +193,9 @@ def _record_time_of_operation(command, path, num_samples) -> list:
     end_time_sec = time.time()
     time_list.append(start_time_sec)
     time_list.append(end_time_sec)
-    time_list.append((end_time_sec-start_time_sec)*1000)
-    result_list.append(time_list)
-  return result_list
+    result_list.append((end_time_sec-start_time_sec)*1000)
+    start_and_end_time_sec_list.append(time_list)
+  return result_list, start_and_end_time_sec_list
 
 
 def _perform_testing(
@@ -231,14 +232,10 @@ def _perform_testing(
     local_dir_path = './{}/{}/'.format(persistent_disk, testing_folder.name)
     gcs_bucket_path = './{}/{}/'.format(gcs_bucket, testing_folder.name)
 
-    results = _record_time_of_operation(
+    persistent_disk_results[testing_folder.name], start_and_end_time_sec_persistent_disk[testing_folder.name]  = _record_time_of_operation(
         command, local_dir_path, num_samples)
-    start_and_end_time_sec_persistent_disk[testing_folder.name] = results[:2]
-    persistent_disk_results[testing_folder.name] = results[2]
-    results = _record_time_of_operation(
+    gcs_bucket_results[testing_folder.name], start_and_end_time_sec_gcs_bucket[testing_folder.name] = _record_time_of_operation(
         command, gcs_bucket_path, num_samples)
-    start_and_end_time_sec_gcs_bucket[testing_folder.name] = results[:2]
-    gcs_bucket_results[testing_folder.name] = results[2]
 
   log.info('Testing completed. Generating output.\n')
   return gcs_bucket_results, persistent_disk_results, start_and_end_time_sec_persistent_disk, start_and_end_time_sec_gcs_bucket
@@ -593,31 +590,37 @@ if __name__ == '__main__':
   # Getting VM metrics for every listing test
   for folder in directory_structure.folders:
 
-    start_time_sec = start_and_end_time_sec_persistent_disk[folder.name][0]
-    end_time_sec = start_and_end_time_sec_persistent_disk[folder.name][1]
+    persistent_disk_results_all_samples = start_and_end_time_sec_persistent_disk[folder.name]
+    for result in persistent_disk_results_all_samples:
+      start_time_sec = result[0]
+      end_time_sec = result[1]
 
-    # Print start and end time of listing tests
-    print("Start time: ", start_time_sec)
-    print("End time: ", end_time_sec)
+      # Print start and end time of listing tests
+      print("Start time: ", start_time_sec)
+      print("End time: ", end_time_sec)
 
-    print(f'Getting VM metrics for listing tests (persistent disk) for folder with number of files: {folder.name}...')
-    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
-                                                INSTANCE, PERIOD_SEC, 'list')
+      print(f'Getting VM metrics for listing tests (persistent disk) for folder with number of files: {folder.name}...')
+      metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
+                                                  INSTANCE, PERIOD_SEC, 'list')
 
-    start_time_sec = start_and_end_time_sec_gcs_bucket[folder.name][0]
-    end_time_sec = start_and_end_time_sec_gcs_bucket[folder.name][1]
+      for row in metrics_data:
+        vm_metrics_data.append(row)
 
-    # Print start and end time of listing tests
-    print("Start time: ", start_time_sec)
-    print("End time: ", end_time_sec)
+    gcs_bucket_results_all_samples = start_and_end_time_sec_gcs_bucket[folder.name]
+    for result in gcs_bucket_results_all_samples:
+      start_time_sec = result[0]
+      end_time_sec = result[1]
 
-    print(f'Getting VM metrics for listing tests (gcs bucket) for folder with number of files: {folder.name}...')
-    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
-                                                INSTANCE, PERIOD_SEC, 'list')
+      # Print start and end time of listing tests
+      print("Start time: ", start_time_sec)
+      print("End time: ", end_time_sec)
 
-    for row in metrics_data:
-      vm_metrics_data.append(row)
+      print(f'Getting VM metrics for listing tests (gcs bucket) for folder with number of files: {folder.name}...')
+      metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
+                                                  INSTANCE, PERIOD_SEC, 'list')
 
+      for row in metrics_data:
+        vm_metrics_data.append(row)
 
   print(vm_metrics_data)
 
