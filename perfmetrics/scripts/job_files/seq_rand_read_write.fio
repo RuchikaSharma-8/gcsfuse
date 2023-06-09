@@ -26,14 +26,6 @@ directory=gcs/256kb
 filesize=256k
 numjobs=40
 
-[2_thread]
-stonewall
-startdelay=310
-bs=16k
-directory=gcs/256kb
-filesize=256k
-rw=write
-numjobs=40
 
 
 
