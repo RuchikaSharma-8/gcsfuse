@@ -33,6 +33,14 @@ def _parse_arguments(argv):
       action='store'
   )
 
+  parser.add_argument(
+      '--upload',
+      help='Upload the results to the Google Sheet.',
+      action='store_true',
+      default=False,
+      required=False,
+  )
+  return parser.parse_args(argv[1:])
   # parser.add_argument(
   #     '--gcsfuse_flags',
   #     help='GCSFuse flags for which the test bucket is mounted.',
@@ -53,15 +61,6 @@ def _parse_arguments(argv):
   #     action='store_true',
   #     required=True,
   # )
-
-  parser.add_argument(
-      '--upload',
-      help='Upload the results to the Google Sheet.',
-      action='store_true',
-      default=False,
-      required=False,
-  )
-  return parser.parse_args(argv[1:])
 
 
 if __name__ == '__main__':
