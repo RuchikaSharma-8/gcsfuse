@@ -184,7 +184,7 @@ class FioMetrics:
       raise e
     finally:
       f.close()
-
+    print("FIO_OUT: ", fio_out)
     if not fio_out:  # Empty JSON object
       raise NoValuesError(f'JSON file {filepath} returned empty object')
     return fio_out
@@ -325,7 +325,7 @@ class FioMetrics:
             curr_job_params[param.name] = global_params[param.name]
 
       params.append(curr_job_params)
-
+    print("PARAMS: ", params)
     return params
 
   def _extract_metrics(self, fio_out) -> List[Dict[str, Any]]:
@@ -409,7 +409,7 @@ class FioMetrics:
 
     if not all_jobs:
       raise NoValuesError('No data could be extracted from file')
-
+    print("ALL_JOBS: ", all_jobs)
     return all_jobs
 
   def _add_to_gsheet(self, jobs, worksheet_name):

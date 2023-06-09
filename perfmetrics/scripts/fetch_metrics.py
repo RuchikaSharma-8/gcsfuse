@@ -20,7 +20,7 @@ def _parse_arguments(argv):
   """Parses the arguments provided to the script via command line.
 
   Args:
-    argv: List of arguments recevied by the script.
+    argv: List of arguments received by the script.
 
   Returns:
     A class containing the parsed arguments.
@@ -33,26 +33,26 @@ def _parse_arguments(argv):
       action='store'
   )
 
-  parser.add_argument(
-      '--gcsfuse_flags',
-      help='GCSFuse flags for which the test bucket is mounted.',
-      action='store_true',
-      required=True,
-  )
-
-  parser.add_argument(
-      '--branch',
-      help='GCSFuse repo branch to be used for building GCSFuse.',
-      action='store_true',
-      required=True,
-  )
-
-  parser.add_argument(
-      '--end_date',
-      help='Date upto when tests are run.',
-      action='store_true',
-      required=True,
-  )
+  # parser.add_argument(
+  #     '--gcsfuse_flags',
+  #     help='GCSFuse flags for which the test bucket is mounted.',
+  #     action='store_true',
+  #     required=True,
+  # )
+  #
+  # parser.add_argument(
+  #     '--branch',
+  #     help='GCSFuse repo branch to be used for building GCSFuse.',
+  #     action='store_true',
+  #     required=True,
+  # )
+  #
+  # parser.add_argument(
+  #     '--end_date',
+  #     help='Date upto when tests are run.',
+  #     action='store_true',
+  #     required=True,
+  # )
 
   parser.add_argument(
       '--upload',

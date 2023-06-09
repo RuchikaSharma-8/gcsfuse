@@ -276,6 +276,8 @@ class VmMetrics:
     """
     metrics_response = self._get_api_response(start_time_sec, end_time_sec,
                                               instance, period, metric)
+
+    print("METRICS_RESPONSE: ", metrics_response)
     metrics_data = _create_metric_points_from_response(metrics_response,
                                                        metric.factor)
 
@@ -379,7 +381,7 @@ class VmMetrics:
     metrics_data = self.fetch_metrics(start_time_sec, end_time_sec, instance,
                                       period, test_type)
 
-    print(metrics_data)
+    print("METRICS DATA: ", metrics_data)
     # Writing data into google sheet
     gsheet.write_to_google_sheet(worksheet_name, metrics_data)
 
