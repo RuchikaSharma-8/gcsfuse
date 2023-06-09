@@ -434,9 +434,7 @@ class FioMetrics:
 
     gsheet.write_to_google_sheet(worksheet_name, values)
 
-  def get_metrics(self,
-                  filepath,
-                  worksheet_name=None) -> List[Dict[str, Any]]:
+  def get_metrics(self, filepath, gcsfuse_flags, branch, end_date, worksheet_name=None) -> List[Dict[str, Any]]:
     """Returns job metrics obtained from given filepath and writes to gsheets.
 
     Args:

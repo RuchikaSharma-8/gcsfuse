@@ -380,6 +380,7 @@ class VmMetrics:
     metrics_data = self.fetch_metrics(start_time_sec, end_time_sec, instance,
                                       period, test_type)
 
+    print(metrics_data)
     # Writing data into google sheet
     gsheet.write_to_google_sheet(worksheet_name, metrics_data)
 

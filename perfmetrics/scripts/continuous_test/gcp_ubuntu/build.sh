@@ -32,29 +32,31 @@ cd "gcsfuse"
 #GODEBUG=asyncpreemptoff=1 go test ./tools/integration_tests/... -p 1 --integrationTest -v --testbucket=gcsfuse-integration-test -timeout=60m
 
 # Checkout back to master branch to use latest CI test scripts in master.
-git checkout master
+BRANCH="master"
+END_DATE="2023-12-25 05:30:00+00"
+git checkout $BRANCH
 
 echo "Building and installing gcsfuse"
 # Build the gcsfuse package using the same commands used during release.
 GCSFUSE_VERSION=0.0.0
-sudo docker build ./tools/package_gcsfuse_docker/ -t gcsfuse:master --build-arg GCSFUSE_VERSION=$GCSFUSE_VERSION --build-arg BRANCH_NAME=master
-sudo docker run -v $HOME/release:/release gcsfuse:master cp -r /packages /release/
+sudo docker build ./tools/package_gcsfuse_docker/ -t gcsfuse:$BRANCH --build-arg GCSFUSE_VERSION=$GCSFUSE_VERSION --build-arg BRANCH_NAME=$BRANCH
+sudo docker run -v $HOME/release:/release gcsfuse:$BRANCH cp -r /packages /release/
 sudo dpkg -i $HOME/release/packages/gcsfuse_${GCSFUSE_VERSION}_amd64.deb
 
 # Mounting gcs bucket
 cd "./perfmetrics/scripts/"
-LOG_FILE_PERIODIC_PERF_TESTS=gcsfuse-logs.txt
-LOG_FILE="$LOG_FILE_PERIODIC_PERF_TESTS"
-GCSFUSE_FLAGS_PERIODIC_PERF_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
+LOG_FILE=gcsfuse-logs.txt
+GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 
+echo "$GCSFUSE_FLAGS"
 ## Executing perf tests
 chmod +x run_load_test_and_fetch_metrics.sh
-#./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS"
+#./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS" "$BRANCH" "$END_DATE"
 
-LOG_FILE_LIST_TESTS=gcsfuse-list-tests-logs.txt
-LOG_FILE="$LOG_FILE_LIST_TESTS"
-GCSFUSE_FLAGS_LIST_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
+LOG_FILE=gcsfuse-list-tests-logs.txt
+echo "$GCSFUSE_FLAGS"
+# GCSFUSE_FLAGS_LIST_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
-./run_ls_benchmark.sh "$GCSFUSE_FLAGS_LIST_TESTS"
+#./run_ls_benchmark.sh "$GCSFUSE_FLAGS_LIST_TESTS" "$BRANCH" "$END_DATE"

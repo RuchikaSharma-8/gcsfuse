@@ -34,6 +34,27 @@ def _parse_arguments(argv):
   )
 
   parser.add_argument(
+      '--gcsfuse_flags',
+      help='GCSFuse flags for which the test bucket is mounted.',
+      action='store_true',
+      required=True,
+  )
+
+  parser.add_argument(
+      '--branch',
+      help='GCSFuse repo branch to be used for building GCSFuse.',
+      action='store_true',
+      required=True,
+  )
+
+  parser.add_argument(
+      '--end_date',
+      help='Date upto when tests are run.',
+      action='store_true',
+      required=True,
+  )
+
+  parser.add_argument(
       '--upload',
       help='Upload the results to the Google Sheet.',
       action='store_true',
