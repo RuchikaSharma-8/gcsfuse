@@ -54,6 +54,7 @@ chmod +x run_load_test_and_fetch_metrics.sh
 #./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS_PERIODIC_PERF_TESTS" "$BRANCH" "$END_DATE"
 
 LOG_FILE=gcsfuse-list-tests-logs.txt
+GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 echo "$GCSFUSE_FLAGS"
 # GCSFUSE_FLAGS_LIST_TESTS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
