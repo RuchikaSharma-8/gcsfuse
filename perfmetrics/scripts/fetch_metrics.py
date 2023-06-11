@@ -12,7 +12,7 @@ INSTANCE = socket.gethostname()
 PERIOD_SEC = 120
 
 # Google sheet worksheets
-FIO_WORKSHEET_NAME = 'fio_metrics'
+FIO_WORKSHEET_NAME = ''
 VM_WORKSHEET_NAME = 'vm_metrics'
 
 

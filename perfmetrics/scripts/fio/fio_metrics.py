@@ -432,6 +432,7 @@ class FioMetrics:
         row.append(metric_val)
       values.append(row)
 
+    print(values)
     gsheet.write_to_google_sheet(worksheet_name, values)
 
   def get_metrics(self, filepath, gcsfuse_flags, branch, end_date, worksheet_name=None) -> List[Dict[str, Any]]:
