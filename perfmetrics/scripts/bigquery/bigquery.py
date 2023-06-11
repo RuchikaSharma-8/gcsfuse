@@ -97,7 +97,7 @@ results = client.query(query_insert_configuration)
 print(results)
 
 
-def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values):
+def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jobs):
   query_get_configuration_id = """
       SELECT configuration_id
       FROM gcsfuse-intern-project-2023.performance_metrics.experiment_configuration
@@ -108,15 +108,16 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values):
   result = client.query(query_get_configuration_id)
   print(result)
 
-  query_insert_into_fio_metrics = """
-    INSERT INTO gcsfuse-intern-project-2023.performance_metrics.fio_metrics
-    (configuration_id, test_type, num_threads, file_size_kb, start_time, end_time, iops, bandwidth_bytes_per_sec, IO_bytes, 
-      min_latency, max_latency, mean_latency, percentile_latency_20, percentile_latency_50, percentile_latency_90, percentile_latency_95)
-    VALUES (result, values[0], values[1], values[2],  values[3], values[4], values[5],  values[6], values[7], values[8], values[9], values[10],
-        values[11], values[12], values[13], values[14]);
-  """
+  for values in values_all_jobs:
+    query_insert_into_fio_metrics = """
+      INSERT INTO gcsfuse-intern-project-2023.performance_metrics.fio_metrics
+      (configuration_id, test_type, num_threads, file_size_kb, start_time, end_time, iops, bandwidth_bytes_per_sec, IO_bytes, 
+        min_latency, max_latency, mean_latency, percentile_latency_20, percentile_latency_50, percentile_latency_90, percentile_latency_95)
+      VALUES (result, values[0], values[1], values[2],  values[3], values[4], values[5],  values[6], values[7], values[8], values[9], values[10],
+          values[11], values[12], values[13], values[14]);
+    """
 
-  results = client.query(query_insert_into_fio_metrics)
-  print(results)
+    results = client.query(query_insert_into_fio_metrics)
+    print(results)
 
 
