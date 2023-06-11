@@ -456,7 +456,7 @@ class FioMetrics:
 
 if __name__ == '__main__':
   argv = sys.argv
-  if len(argv) != 2:
+  if len(argv) != 5:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
                     'python3 -m fio.fio_metrics <fio output json filepath>')
