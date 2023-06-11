@@ -450,6 +450,22 @@ class FioMetrics:
     """
     fio_out = self._load_file_dict(filepath)
     job_metrics = self._extract_metrics(fio_out)
+
+    jobs = job_metrics
+    values = []
+    for job in jobs:
+      row = []
+      for param_val in job[consts.PARAMS].values():
+        row.append(param_val)
+
+      row.append(job[consts.START_TIME])
+      row.append(job[consts.END_TIME])
+      for metric_val in job[consts.METRICS].values():
+        row.append(metric_val)
+      values.append(row)
+
+    print("VALUES: ", values)
+
     if worksheet_name:
       self._add_to_gsheet(job_metrics, worksheet_name)
 

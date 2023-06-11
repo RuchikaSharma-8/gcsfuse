@@ -22,7 +22,7 @@ echo Fetching results..
 # Upload data to the gsheet only when it runs through kokoro.
 #if [ "${KOKORO_JOB_TYPE}" != "RELEASE" ] && [ "${KOKORO_JOB_TYPE}" != "CONTINUOUS_INTEGRATION" ] && [ "${KOKORO_JOB_TYPE}" != "PRESUBMIT_GITHUB" ];
 #then
-python3 fetch_metrics.py fio-output.json --gcsfuse_flags "$GCSFUSE_FLAGS" --branch "$BRANCH" --end_date "$END_DATE" --upload
+python3 fetch_metrics.py fio-output.json --gcsfuse_flags "$GCSFUSE_FLAGS" --branch "$BRANCH" --end_date "$END_DATE"
 #else
   #python3 fetch_metrics.py fio-output.json --gcsfuse_flags "$GCSFUSE_FLAGS" --branch "$BRANCH" --end_date "$END_DATE" --upload
 #fi
