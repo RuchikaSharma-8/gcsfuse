@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Tuple, Callable
 
 from fio import constants as consts
 from gsheet import gsheet
+from bigquery import bigquery
 
 
 @dataclass(frozen=True)
@@ -412,7 +413,7 @@ class FioMetrics:
     print("ALL_JOBS: ", all_jobs)
     return all_jobs
 
-  def _add_to_gsheet(self, jobs, worksheet_name):
+  def _add_to_gsheet(self, jobs, gcsfuse_flags, branch, end_date, worksheet_name=None):
     """Add the metric values to respective columns in a google sheet.
 
     Args:
@@ -433,6 +434,8 @@ class FioMetrics:
       values.append(row)
 
     print(values)
+
+    bigquery.write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values)
     gsheet.write_to_google_sheet(worksheet_name, values)
 
   def get_metrics(self, filepath, gcsfuse_flags, branch, end_date, worksheet_name=None) -> List[Dict[str, Any]]:
@@ -466,8 +469,9 @@ class FioMetrics:
 
     print("VALUES: ", values)
 
+    self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date)
     if worksheet_name:
-      self._add_to_gsheet(job_metrics, worksheet_name)
+      self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date, worksheet_name)
 
     return job_metrics
 
