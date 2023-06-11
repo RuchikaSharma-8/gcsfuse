@@ -108,7 +108,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
         gcsfuse_flags STRING, 
         branch STRING, 
         end_date TIMESTAMP,  
-        PRIMARY KEY (gcsfuse_flags, branch, end_date) NOT ENFORCED
+        PRIMARY KEY (configuration_id) NOT ENFORCED
       ) OPTIONS (description = 'Table for storing Job Configurations and respective VM instance name on which the job was run');
   """
   query_create_table_fio_metrics = """
