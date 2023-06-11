@@ -32,7 +32,24 @@ def _parse_arguments(argv):
       help='Provide path of the output json file.',
       action='store'
   )
-
+  parser.add_argument(
+      '--gcsfuse_flags',
+      help='GCSFuse flags for which the test bucket is mounted.',
+      action='store_true',
+      required=True,
+  )
+  parser.add_argument(
+      '--branch',
+      help='GCSFuse repo branch to be used for building GCSFuse.',
+      action='store_true',
+      required=True,
+  )
+  parser.add_argument(
+      '--end_date',
+      help='Date upto when tests are run.',
+      action='store_true',
+      required=True,
+  )
   parser.add_argument(
       '--upload',
       help='Upload the results to the Google Sheet.',
@@ -41,26 +58,6 @@ def _parse_arguments(argv):
       required=False,
   )
   return parser.parse_args(argv[1:])
-  # parser.add_argument(
-  #     '--gcsfuse_flags',
-  #     help='GCSFuse flags for which the test bucket is mounted.',
-  #     action='store_true',
-  #     required=True,
-  # )
-  #
-  # parser.add_argument(
-  #     '--branch',
-  #     help='GCSFuse repo branch to be used for building GCSFuse.',
-  #     action='store_true',
-  #     required=True,
-  # )
-  #
-  # parser.add_argument(
-  #     '--end_date',
-  #     help='Date upto when tests are run.',
-  #     action='store_true',
-  #     required=True,
-  # )
 
 
 if __name__ == '__main__':
@@ -72,9 +69,9 @@ if __name__ == '__main__':
   args = _parse_arguments(argv)
 
   if args.upload:
-    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, FIO_WORKSHEET_NAME)
+    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, args.gcsfuse_flags, args.branch, args.end_date, FIO_WORKSHEET_NAME)
   else:
-    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path)
+    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, args.gcsfuse_flags, args.branch, args.end_date)
 
   print('Waiting for 360 seconds for metrics to be updated on VM...')
   # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
@@ -96,8 +93,8 @@ if __name__ == '__main__':
 
     rw = job[fio_metrics.consts.PARAMS][fio_metrics.consts.RW]
     print(f'Getting VM metrics for job at index {ind + 1}...')
-    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
-                                                INSTANCE, PERIOD_SEC, rw)
+    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, args.gcsfuse_flags,
+                                                args.branch, args.end_date, INSTANCE, PERIOD_SEC, rw)
     for row in metrics_data:
       vm_metrics_data.append(row)
 
