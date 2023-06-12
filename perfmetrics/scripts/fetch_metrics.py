@@ -93,9 +93,9 @@ if __name__ == '__main__':
 
     rw = job[fio_metrics.consts.PARAMS][fio_metrics.consts.RW]
     print(f'Getting VM metrics for job at index {ind + 1}...')
-    # metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, args.gcsfuse_flags,
-    #                                             args.branch, args.end_date, INSTANCE, PERIOD_SEC, rw)
-    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, INSTANCE, PERIOD_SEC, rw)
+    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, args.gcsfuse_flags,
+                                                args.branch, args.end_date, INSTANCE, PERIOD_SEC, rw)
+    # metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, INSTANCE, PERIOD_SEC, rw)
     for row in metrics_data:
       vm_metrics_data.append(row)
 
