@@ -2,14 +2,14 @@
 
 This python script benchmarks and compares the latency of listing operation in
 persistent disk vs GCS bucket. It creates the necessary directory structure,
-containing files and folders, needed to test the listing operation. Furthermore,
+containing files and folders, needed to test the listing operation. Furthermore
 it can optionally upload the results of the test to a Google Sheet. It takes
-input a JSON config file which contains the info regrading directory structure
+input a JSON config file whcih contains the info regrading directory structure
 and also through which multiple tests of different configurations can be
 performed in a single run.
 
 Typical usage example:
-  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file
+  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --command COMMAND config_file
 
   Flag -h: Typical help interface of the script.
   Flag --keep_files: Do not delete the generated directory structure from the
@@ -17,8 +17,7 @@ Typical usage example:
   Flag --upload: Uploads the results of the test to the Google Sheet.
   Flag --num_samples: Runs each test for NUM_SAMPLES times.
   Flag --message: Takes input a message string, which describes/titles the test.
-  Flag --gcsfuse_flags (required): GCSFUSE flags with which the list tests bucket will be mounted.
-  Flag --command (required): Takes as input a string, which is the command to run
+  Flag --command (required): Takes a input a string, which is the command to run
                              the tests on.
   config_file (required): Path to the JSON config file which contains the
                           details of the tests.
@@ -378,12 +377,11 @@ def _unmount_gcs_bucket(gcs_bucket) -> None:
         gcs_bucket)
 
 
-def _mount_gcs_bucket(bucket_name, gcsfuse_flags) -> str:
+def _mount_gcs_bucket(bucket_name) -> str:
   """Mounts the GCS bucket into the gcs_bucket directory.
 
   Args:
     bucket_name: Name of the bucket to be mounted.
-    gcsfuse_flags: Set of flags for which bucket_name will be mounted
 
   Returns:
     A string which contains the name of the directory to which the bucket
@@ -398,8 +396,8 @@ def _mount_gcs_bucket(bucket_name, gcsfuse_flags) -> str:
   subprocess.call('mkdir {}'.format(gcs_bucket), shell=True)
 
   exit_code = subprocess.call(
-      'gcsfuse {} {} {}'.format(
-          gcsfuse_flags, bucket_name, gcs_bucket), shell=True)
+      'gcsfuse --implicit-dirs --enable-storage-client-library --max-conns-per-host 100 {} {}'.format(
+          bucket_name, gcs_bucket), shell=True)
   if exit_code != 0:
     log.error('Cannot mount the GCS bucket due to exit code %s.\n', exit_code)
     subprocess.call('bash', shell=True)
@@ -411,7 +409,7 @@ def _parse_arguments(argv):
   """Parses the arguments provided to the script via command line.
 
   Args:
-    argv: List of arguments received by the script.
+    argv: List of arguments recevied by the script.
 
   Returns:
     A class containing the parsed arguments.
@@ -462,13 +460,6 @@ def _parse_arguments(argv):
       default=['ls -R'],
       required=True,
   )
-  parser.add_argument(
-      '--gcsfuse_flags',
-      help='Gcsfuse flags for mounting the list tests bucket. Example set of flags - "--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"',
-      action='store',
-      nargs=1,
-      required=True,
-  )
   # Ignoring the first parameter, as it is the path of this python
   # script itself.
   return parser.parse_args(argv[1:])
@@ -498,10 +489,10 @@ def _check_dependencies(packages) -> None:
 
 if __name__ == '__main__':
   argv = sys.argv
-  if len(argv) < 4:
+  if len(argv) < 3:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 listing_benchmark.py [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file')
+                    'python3 listing_benchmark.py [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --command COMMAND config_file')
 
   args = _parse_arguments(argv)
 

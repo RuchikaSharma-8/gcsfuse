@@ -28,7 +28,7 @@ commitId=$(git log --before='yesterday 23:59:59' --max-count=1 --pretty=%H)
 git checkout $commitId
 
 echo "Executing integration tests"
-GODEBUG=asyncpreemptoff=1 go test ./tools/integration_tests/... -p 1 --integrationTest -v --testbucket=gcsfuse-integration-test -timeout=60m
+GODEBUG=asyncpreemptoff=1 go test ./tools/integration_tests/... -p 1 --integrationTest -v --testbucket=gcsfuse-integration-test
 
 # Checkout back to master branch to use latest CI test scripts in master.
 git checkout master
@@ -42,17 +42,22 @@ sudo dpkg -i $HOME/release/packages/gcsfuse_${GCSFUSE_VERSION}_amd64.deb
 
 # Mounting gcs bucket
 cd "./perfmetrics/scripts/"
-
+echo "Mounting gcs bucket"
+mkdir -p gcs
 LOG_FILE=${KOKORO_ARTIFACTS_DIR}/gcsfuse-logs.txt
 GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
+BUCKET_NAME=periodic-perf-tests
+MOUNT_POINT=gcs
+# The VM will itself exit if the gcsfuse mount fails.
+gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
 
 # Executing perf tests
 chmod +x run_load_test_and_fetch_metrics.sh
-./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FLAGS"
+./run_load_test_and_fetch_metrics.sh
 
-# ls_metrics test. This test does gcsfuse mount with the passed flags first and then does the testing.
-LOG_FILE=gcsfuse-list-tests-logs.txt
-GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"
+sudo umount $MOUNT_POINT
+
+# ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
-./run_ls_benchmark.sh "$GCSFUSE_FLAGS"
+./run_ls_benchmark.sh
