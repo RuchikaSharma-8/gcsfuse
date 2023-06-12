@@ -135,7 +135,6 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   query_create_table_vm_metrics = """
       CREATE OR REPLACE TABLE gcsfuse-intern-project-2023.performance_metrics.vm_metrics(
         configuration_id INT64, 
-        end_time_vm INT64
         end_time INT64, 
         cpu_utilization_peak_percentage FLOAT64, 
         cpu_utilization_mean_percentage FLOAT64, 
@@ -155,7 +154,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
       ) OPTIONS (description = 'Table for storing VM metrics extracted from periodic performance load testing');
   """
   query_create_table_ls_metrics = """
-      CREATE OR REPLACE TABLE gcsfuse-intern-project-2023.performance_metrics.ls_metrics_gcsfuse(
+      CREATE OR REPLACE TABLE gcsfuse-intern-project-2023.performance_metrics.ls_metrics(
         configuration_id INT64,
         test_type STRING, 
         command STRING, 
