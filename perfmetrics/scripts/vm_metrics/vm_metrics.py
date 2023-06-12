@@ -321,8 +321,10 @@ class VmMetrics:
 
     return updated_metrics_list
 
+  # def fetch_metrics(self, start_time_sec, end_time_sec, gcsfuse_flags, branch, end_date,
+  #                   instance, period, test_type):
   def fetch_metrics(self, start_time_sec, end_time_sec, gcsfuse_flags, branch, end_date,
-                    instance, period, test_type):
+      instance, period, test_type):
     """Fetches the metrics data for all types and returns a list of lists to be written in google sheet.
 
     Args:
@@ -362,9 +364,11 @@ class VmMetrics:
 
     return metrics_data
 
+  # def fetch_metrics_and_write_to_google_sheet(self, start_time_sec,
+  #     end_time_sec, gcsfuse_flags, branch, end_date,
+  #     instance, period, test_type, worksheet_name):
   def fetch_metrics_and_write_to_google_sheet(self, start_time_sec,
-      end_time_sec, gcsfuse_flags, branch, end_date,
-      instance, period, test_type, worksheet_name):
+      end_time_sec, instance, period, test_type, worksheet_name):
     """Fetches the metrics data for all types and writes to a google sheet.
 
     Args:
@@ -380,7 +384,9 @@ class VmMetrics:
     self._validate_start_end_times(start_time_sec, end_time_sec)
 
     # Getting metrics data:
-    metrics_data = self.fetch_metrics(start_time_sec, end_time_sec, gcsfuse_flags, branch, end_date, instance,
+    # metrics_data = self.fetch_metrics(start_time_sec, end_time_sec, gcsfuse_flags, branch, end_date, instance,
+    #                                   period, test_type)
+    metrics_data = self.fetch_metrics(start_time_sec, end_time_sec, instance,
                                       period, test_type)
 
     print("METRICS DATA: ", metrics_data)
@@ -397,9 +403,13 @@ def main() -> None:
   test_type = sys.argv[5]
   worksheet_name = sys.argv[6]
   vm_metrics = VmMetrics()
+  # vm_metrics.fetch_metrics_and_write_to_google_sheet(start_time_sec,
+  #                                                    end_time_sec, gcsfuse_flags,
+  #                                                    branch, end_date, instance,
+  #                                                    period, test_type,
+  #                                                    worksheet_name)
   vm_metrics.fetch_metrics_and_write_to_google_sheet(start_time_sec,
-                                                     end_time_sec, gcsfuse_flags,
-                                                     branch, end_date, instance,
+                                                     end_time_sec, instance,
                                                      period, test_type,
                                                      worksheet_name)
 
