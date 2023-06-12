@@ -40,7 +40,9 @@ sys.path.insert(0, '..')
 import generate_files
 from google.protobuf.json_format import ParseDict
 from gsheet import gsheet
+from vm_metrics import vm_metrics
 import numpy as np
+import socket
 
 
 logging.basicConfig(
@@ -50,6 +52,8 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
+INSTANCE = socket.gethostname()
+PERIOD_SEC = 120
 WORKSHEET_NAME_GCS = 'ls_metrics_gcsfuse'
 WORKSHEET_NAME_PD = 'ls_metrics_persistent_disk'
 
@@ -175,18 +179,26 @@ def _record_time_of_operation(command, path, num_samples) -> list:
     num_samples: Number of times to run the command.
 
   Returns:
-    A list containing the latencies of operations in milisecond.
+    Two lists, first one containing the latencies and the other containing
+    start and end times of operations in millisecond.
   """
 
   result_list = []
+  start_and_end_time_sec_list = []
+
   for _ in range(num_samples):
+    temp_time_list = []
     start_time_sec = time.time()
     subprocess.call('{} {}'.format(command, path), shell=True,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)
     end_time_sec = time.time()
+    temp_time_list.append(start_time_sec)
+    temp_time_list.append(end_time_sec)
     result_list.append((end_time_sec-start_time_sec)*1000)
-  return result_list
+    start_and_end_time_sec_list.append(temp_time_list)
+
+  return result_list, start_and_end_time_sec_list
 
 
 def _perform_testing(
@@ -211,23 +223,32 @@ def _perform_testing(
                         (all samples) for each testing folder.
     persistent_disk_results: A dictionary containing the list of results
                              (all samples) for each testing folder.
+    start_and_end_times_ms_persistent_disk: A dictionary containing the list of
+                                            start and end times (all samples) for
+                                            each testing folder.
+    start_and_end_times_ms_gcs_bucket: A dictionary containing the list of
+                                       start and end times (all samples) for
+                                       each testing folder.
+
   """
 
   gcs_bucket_results = {}
   persistent_disk_results = {}
+  start_and_end_times_ms_persistent_disk = {}
+  start_and_end_times_ms_gcs_bucket = {}
 
   for testing_folder in folders:
     log.info('Testing started for testing folder: %s\n', testing_folder.name)
     local_dir_path = './{}/{}/'.format(persistent_disk, testing_folder.name)
     gcs_bucket_path = './{}/{}/'.format(gcs_bucket, testing_folder.name)
 
-    persistent_disk_results[testing_folder.name] = _record_time_of_operation(
+    persistent_disk_results[testing_folder.name], start_and_end_times_ms_persistent_disk[testing_folder.name] = _record_time_of_operation(
         command, local_dir_path, num_samples)
-    gcs_bucket_results[testing_folder.name] = _record_time_of_operation(
+    gcs_bucket_results[testing_folder.name], start_and_end_times_ms_gcs_bucket[testing_folder.name] = _record_time_of_operation(
         command, gcs_bucket_path, num_samples)
 
   log.info('Testing completed. Generating output.\n')
-  return gcs_bucket_results, persistent_disk_results
+  return gcs_bucket_results, persistent_disk_results, start_and_end_times_ms_persistent_disk, start_and_end_times_ms_gcs_bucket
 
 
 def _create_directory_structure(
@@ -533,7 +554,7 @@ if __name__ == '__main__':
 
   gcs_bucket = _mount_gcs_bucket(directory_structure.name, args.gcsfuse_flags[0])
 
-  gcs_bucket_results, persistent_disk_results = _perform_testing(
+  gcs_bucket_results, persistent_disk_results, start_and_end_times_ms_persistent_disk, start_and_end_times_ms_gcs_bucket = _perform_testing(
       directory_structure.folders, gcs_bucket, persistent_disk,
       int(args.num_samples[0]), args.command[0])
 
@@ -552,6 +573,62 @@ if __name__ == '__main__':
     _export_to_gsheet(
         directory_structure.folders, pd_parsed_metrics, args.command[0],
         WORKSHEET_NAME_PD)
+
+  print('Waiting for 360 seconds for metrics to be updated on VM...')
+  # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
+  # So, waiting for 360 seconds to ensure the returned metrics are not empty.
+  # Intermittently custom metrics are not available after 240 seconds, hence
+  # waiting for 360 secs instead of 240 secs
+  time.sleep(360)
+
+  vm_metrics_obj = vm_metrics.VmMetrics()
+
+  # Getting VM metrics for listing tests on each folder
+  for folder in directory_structure.folders:
+
+    # Getting start and end times of persistent disk listing tests for all 30 samples
+    persistent_disk_results_all_samples = start_and_end_times_ms_persistent_disk[folder.name]
+    print(f'Getting VM metrics for listing tests (persistent disk) for folder {folder.name}...')
+    vm_metrics_data = []
+
+    for sample in persistent_disk_results_all_samples:
+      start_time = sample[0]
+      end_time = sample[1]
+
+      metrics_data = vm_metrics_obj.fetch_metrics(start_time, end_time,
+                                                  INSTANCE, PERIOD_SEC, 'list')
+
+      for row in metrics_data:
+        vm_metrics_data.append(row)
+
+    vm_metrics_data_array = np.array(vm_metrics_data)
+    # Taking max of peak CPU utilization over all samples to get overall peak CPU utilization
+    peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
+    # Taking mean of mean CPU utilization over all samples to get overall mean CPU utilization
+    mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
+    print("Peak CPU utilization: ", peak_cpu_utilization, "Mean CPU utilization: ", mean_cpu_utilization)
+
+    # Getting start and end times of gcs bucket listing tests for all 30 samples
+    gcs_bucket_results_all_samples = start_and_end_times_ms_gcs_bucket[folder.name]
+    print(f'Getting VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
+    vm_metrics_data = []
+
+    for sample in gcs_bucket_results_all_samples:
+      start_time = sample[0]
+      end_time = sample[1]
+
+      metrics_data = vm_metrics_obj.fetch_metrics(start_time, end_time,
+                                                  INSTANCE, PERIOD_SEC, 'list')
+
+      for row in metrics_data:
+        vm_metrics_data.append(row)
+
+    vm_metrics_data_array = np.array(vm_metrics_data)
+    # Taking max of peak CPU utilization over all samples to get overall peak CPU utilization
+    peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
+    # Taking mean of mean CPU utilization over all samples to get overall mean CPU utilization
+    mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
+    print("Peak CPU utilization: ", peak_cpu_utilization, "Mean CPU utilization: ", mean_cpu_utilization)
 
   if not args.keep_files:
     log.info('Deleting files from persistent disk.\n')

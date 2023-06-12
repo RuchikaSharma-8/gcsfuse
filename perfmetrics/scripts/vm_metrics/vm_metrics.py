@@ -83,6 +83,10 @@ METRICS_LIST = [
     READ_BYTES_COUNT, OPS_ERROR_COUNT
 ]
 
+# List of VM metrics extracted for listing tests
+LISTING_TESTS_METRICS_LIST = [
+    CPU_UTI_PEAK, CPU_UTI_MEAN
+]
 
 class NoValuesError(Exception):
   """API response values are missing."""
@@ -297,7 +301,9 @@ class VmMetrics:
     self._validate_start_end_times(start_time_sec, end_time_sec)
     
     # Getting updated metrics list:
-    updated_metrics_list = self._add_new_metric_using_test_type(test_type)
+    updated_metrics_list = LISTING_TESTS_METRICS_LIST
+    if test_type != 'list':
+      updated_metrics_list = self._add_new_metric_using_test_type(test_type)
 
     # Extracting MetricPoint list for every metric in the updated_metrics_list:
     for metric in updated_metrics_list:
