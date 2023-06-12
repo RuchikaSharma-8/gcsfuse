@@ -342,11 +342,11 @@ class VmMetrics:
     self._validate_start_end_times(start_time_sec, end_time_sec)
 
     # Getting updated metrics list:
-    #updated_metrics_list = self._add_new_metric_using_test_type(test_type)
+    updated_metrics_list = self._add_new_metric_using_test_type(test_type)
 
-    updated_metrics_list = METRICS_LIST
-    if test_type == 'list':
-      updated_metrics_list = METRICS_LIST_SUBSET
+    #updated_metrics_list = METRICS_LIST
+    #if test_type == 'list':
+    #  updated_metrics_list = METRICS_LIST_SUBSET
     # Extracting MetricPoint list for every metric in the updated_metrics_list:
     for metric in updated_metrics_list:
       metric.metric_point_list = self._get_metrics(start_time_sec, end_time_sec,
