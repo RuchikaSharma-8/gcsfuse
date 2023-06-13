@@ -9,7 +9,7 @@ and also through which multiple tests of different configurations can be
 performed in a single run.
 
 Typical usage example:
-  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file
+  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --branch "$BRANCH" --end_date "$END_DATE" --command COMMAND config_file
 
   Flag -h: Typical help interface of the script.
   Flag --keep_files: Do not delete the generated directory structure from the
@@ -42,6 +42,7 @@ import generate_files
 from google.protobuf.json_format import ParseDict
 from gsheet import gsheet
 from vm_metrics import vm_metrics
+from bigquery import bigquery
 import numpy as np
 
 
@@ -77,7 +78,7 @@ def _count_number_of_files_and_folders(directory, files, folders):
   return files, folders
 
 
-def _export_to_gsheet(folders, metrics, command, worksheet) -> None:
+def _export_to_gsheet(folders, metrics, command) -> list:
   """Exports data to the Google Sheet.
   Args:
     folders: List containing protobufs of testing folders.
@@ -115,9 +116,9 @@ def _export_to_gsheet(folders, metrics, command, worksheet) -> None:
     ]
     gsheet_data.append(row)
 
-  gsheet.write_to_google_sheet(worksheet, gsheet_data)
+  #gsheet.write_to_google_sheet(worksheet, gsheet_data)
   os.chdir('./ls_metrics')  # Changing the directory back to current directory.
-  return
+  return gsheet_data
 
 
 def _parse_results(folders, results_list, message, num_samples) -> dict:
@@ -467,6 +468,20 @@ def _parse_arguments(argv):
       nargs=1,
       required=True,
   )
+  parser.add_argument(
+      '--branch',
+      help='Gcsfuse flags for mounting the bucket. Example set of flags - "--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-file-tests-logs.txt --log-format \"text\" --stackdriver-export-interval=30s"',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+  parser.add_argument(
+      '--end_date',
+      help='Gcsfuse flags for mounting the bucket. Example set of flags - "--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-file-tests-logs.txt --log-format \"text\" --stackdriver-export-interval=30s"',
+      action='store',
+      nargs=1,
+      required=True,
+  )
   # Ignoring the first parameter, as it is the path of this python
   # script itself.
   return parser.parse_args(argv[1:])
@@ -496,7 +511,7 @@ def _check_dependencies(packages) -> None:
 
 if __name__ == '__main__':
   argv = sys.argv
-  if len(argv) < 4:
+  if len(argv) < 6:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
                     'python3 listing_benchmark.py [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file ')
@@ -578,78 +593,6 @@ if __name__ == '__main__':
   #       directory_structure.folders, pd_parsed_metrics, args.command[0],
   #       WORKSHEET_NAME_PD)
 
-  # Changing directory to comply with "cred.json" path in "gsheet.py".
-  metrics = gcs_parsed_metrics
-  command = args.command[0]
-  folders = directory_structure.folders
-  os.chdir('..')
-  gsheet_data = []
-  for testing_folder in folders:
-    num_files, num_folders = _count_number_of_files_and_folders(
-        testing_folder, 0, 0)
-    row = [
-        metrics[testing_folder.name]['Test Desc.'],
-        command,
-        num_files,
-        num_folders,
-        metrics[testing_folder.name]['Number of samples'],
-        metrics[testing_folder.name]['Mean'],
-        metrics[testing_folder.name]['Median'],
-        metrics[testing_folder.name]['Standard Dev'],
-        metrics[testing_folder.name]['Quantiles']['0 %ile'],
-        metrics[testing_folder.name]['Quantiles']['20 %ile'],
-        metrics[testing_folder.name]['Quantiles']['50 %ile'],
-        metrics[testing_folder.name]['Quantiles']['90 %ile'],
-        metrics[testing_folder.name]['Quantiles']['95 %ile'],
-        metrics[testing_folder.name]['Quantiles']['98 %ile'],
-        metrics[testing_folder.name]['Quantiles']['99 %ile'],
-        metrics[testing_folder.name]['Quantiles']['99.5 %ile'],
-        metrics[testing_folder.name]['Quantiles']['99.9 %ile'],
-        metrics[testing_folder.name]['Quantiles']['100 %ile']
-    ]
-    gsheet_data.append(row)
-
-  print(gsheet_data)
-  os.chdir('./ls_metrics')  # Changing the directory back to current directory.
-
-
-
-  # Changing directory to comply with "cred.json" path in "gsheet.py".
-
-  metrics = pd_parsed_metrics
-  command = args.command[0]
-  folders = directory_structure.folders
-  os.chdir('..')
-  gsheet_data = []
-  for testing_folder in folders:
-    num_files, num_folders = _count_number_of_files_and_folders(
-        testing_folder, 0, 0)
-    row = [
-        metrics[testing_folder.name]['Test Desc.'],
-        command,
-        num_files,
-        num_folders,
-        metrics[testing_folder.name]['Number of samples'],
-        metrics[testing_folder.name]['Mean'],
-        metrics[testing_folder.name]['Median'],
-        metrics[testing_folder.name]['Standard Dev'],
-        metrics[testing_folder.name]['Quantiles']['0 %ile'],
-        metrics[testing_folder.name]['Quantiles']['20 %ile'],
-        metrics[testing_folder.name]['Quantiles']['50 %ile'],
-        metrics[testing_folder.name]['Quantiles']['90 %ile'],
-        metrics[testing_folder.name]['Quantiles']['95 %ile'],
-        metrics[testing_folder.name]['Quantiles']['98 %ile'],
-        metrics[testing_folder.name]['Quantiles']['99 %ile'],
-        metrics[testing_folder.name]['Quantiles']['99.5 %ile'],
-        metrics[testing_folder.name]['Quantiles']['99.9 %ile'],
-        metrics[testing_folder.name]['Quantiles']['100 %ile']
-    ]
-    gsheet_data.append(row)
-
-  print(gsheet_data)
-  os.chdir('./ls_metrics')  # Changing the directory back to current directory.
-
-
 
   print('Waiting for 360 seconds for metrics to be updated on VM...')
   # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
@@ -659,6 +602,9 @@ if __name__ == '__main__':
   time.sleep(240)
 
   vm_metrics_obj = vm_metrics.VmMetrics()
+
+  gcsfuse_vm_metrics = []
+  persistent_disk_vm_metrics = []
 
   # Getting VM metrics for every listing test
   for folder in directory_structure.folders:
@@ -681,6 +627,7 @@ if __name__ == '__main__':
     peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
     mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
     print("Peak CPU utilization: ", peak_cpu_utilization, ", Mean CPU utilization: ", mean_cpu_utilization)
+    persistent_disk_vm_metrics.append([peak_cpu_utilization, mean_cpu_utilization])
 
     print(f'Getting VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
     gcs_bucket_results_all_samples = start_and_end_times_ms_gcs_bucket[folder.name]
@@ -700,6 +647,14 @@ if __name__ == '__main__':
     peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
     mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
     print("Peak CPU utilization: ", peak_cpu_utilization, ", Mean CPU utilization: ", mean_cpu_utilization)
+    gcsfuse_vm_metrics.append([peak_cpu_utilization, mean_cpu_utilization])
+
+  gcsfuse_metrics = _export_to_gsheet(
+        directory_structure.folders, gcs_parsed_metrics, args.command[0])
+  pd_metrics = _export_to_gsheet(
+        directory_structure.folders, pd_parsed_metrics, args.command[0])
+
+  bigquery.write_ls_metrics_to_bigquery(args.gcsfuse_flags[0], args.branch[0], args.end_date[0], gcsfuse_metrics, pd_metrics, gcsfuse_vm_metrics, pd_vm_metrics)
 
   if not args.keep_files:
     log.info('Deleting files from persistent disk.\n')
