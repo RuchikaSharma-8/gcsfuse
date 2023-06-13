@@ -19,6 +19,13 @@ group_reporting=1
 allrandrepeat=1
 filename_format=$jobname.$jobnum.$filenum
 
+[1_thread]
+stonewall
+bs=16k
+directory=gcs/256kb
+filesize=256k
+numjobs=40
+
 
 
 
