@@ -73,31 +73,31 @@ if __name__ == '__main__':
   else:
     temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, args.gcsfuse_flags, args.branch, args.end_date)
 
-  print('Waiting for 360 seconds for metrics to be updated on VM...')
-  # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
-  # So, waiting for 360 seconds to ensure the returned metrics are not empty.
-  # Intermittently custom metrics are not available after 240 seconds, hence
-  # waiting for 360 secs instead of 240 secs
-  time.sleep(240)
-
-  vm_metrics_obj = vm_metrics.VmMetrics()
-  vm_metrics_data = []
-  # Getting VM metrics for every job
-  for ind, job in enumerate(temp):
-    start_time_sec = job[fio_metrics.consts.START_TIME]
-    end_time_sec = job[fio_metrics.consts.END_TIME]
-
-    # Print start and end time of jobs
-    print("Start time: ", start_time_sec)
-    print("End time: ", end_time_sec)
-
-    rw = job[fio_metrics.consts.PARAMS][fio_metrics.consts.RW]
-    print(f'Getting VM metrics for job at index {ind + 1}...')
-    metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, args.gcsfuse_flags,
-                                                args.branch, args.end_date, INSTANCE, PERIOD_SEC, rw)
-    # metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, INSTANCE, PERIOD_SEC, rw)
-    for row in metrics_data:
-      vm_metrics_data.append(row)
-
-  if args.upload:
-    gsheet.write_to_google_sheet(VM_WORKSHEET_NAME, vm_metrics_data)
+  # print('Waiting for 360 seconds for metrics to be updated on VM...')
+  # # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
+  # # So, waiting for 360 seconds to ensure the returned metrics are not empty.
+  # # Intermittently custom metrics are not available after 240 seconds, hence
+  # # waiting for 360 secs instead of 240 secs
+  # time.sleep(240)
+  #
+  # vm_metrics_obj = vm_metrics.VmMetrics()
+  # vm_metrics_data = []
+  # # Getting VM metrics for every job
+  # for ind, job in enumerate(temp):
+  #   start_time_sec = job[fio_metrics.consts.START_TIME]
+  #   end_time_sec = job[fio_metrics.consts.END_TIME]
+  #
+  #   # Print start and end time of jobs
+  #   print("Start time: ", start_time_sec)
+  #   print("End time: ", end_time_sec)
+  #
+  #   rw = job[fio_metrics.consts.PARAMS][fio_metrics.consts.RW]
+  #   print(f'Getting VM metrics for job at index {ind + 1}...')
+  #   metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, args.gcsfuse_flags,
+  #                                               args.branch, args.end_date, INSTANCE, PERIOD_SEC, rw)
+  #   # metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec, INSTANCE, PERIOD_SEC, rw)
+  #   for row in metrics_data:
+  #     vm_metrics_data.append(row)
+  #
+  # if args.upload:
+  #   gsheet.write_to_google_sheet(VM_WORKSHEET_NAME, vm_metrics_data)
