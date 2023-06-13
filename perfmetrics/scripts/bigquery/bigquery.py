@@ -1,5 +1,21 @@
 from google.cloud import bigquery
 
+def setup_bigquery():
+  client = bigquery.Client()
+
+  dataset = client.create_dataset('perfmetrics')
+  table_id = "gcsfuse-intern-project-2023.your_dataset.your_table_name"
+
+  schema = [
+      bigquery.SchemaField("full_name", "STRING", mode="REQUIRED"),
+      bigquery.SchemaField("age", "INTEGER", mode="REQUIRED"),
+  ]
+
+  table = bigquery.Table(table_id, schema=schema)
+  table = client.create_table(table)  # Make an API request.
+  print(
+      "Created table {}.{}.{}".format(table.project, table.dataset_id, table.table_id)
+  )
 def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jobs):
 
   # Instantiate a BigQuery client
@@ -224,7 +240,7 @@ def write_ls_metrics_to_bigquery(gcsfuse_flags, branch, end_date, gcsfuse_values
     print(row1)
     print(row2)
     rows_to_insert = [
-        (1, 'gcsfuse', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1]),
+        (1, 'gcsfuse', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1], None)
     ]
     errors = client.insert_rows(table, rows_to_insert)
     print(errors)
@@ -233,7 +249,7 @@ def write_ls_metrics_to_bigquery(gcsfuse_flags, branch, end_date, gcsfuse_values
     print(row1)
     print(row2)
     rows_to_insert = [
-        (1, 'disk', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1]),
+        (1, 'disk', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1], None)
     ]
     errors = client.insert_rows(table, rows_to_insert)
     print(errors)
