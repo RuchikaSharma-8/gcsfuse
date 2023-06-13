@@ -194,6 +194,10 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   results = client.query(query_insert_configuration)
   print(results)
 
+  print(gcsfuse_flags)
+  print(branch)
+  print(end_date)
+  
   query_get_configuration_id = """
       SELECT configuration_id
       FROM gcsfuse-intern-project-2023.performance_metrics.experiment_configuration
