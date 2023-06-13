@@ -188,7 +188,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
 
   query_insert_configuration = """
       INSERT INTO gcsfuse-intern-project-2023.performance_metrics.experiment_configuration 
-      VALUES (1, '--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-list-tests-logs.txt --log-format \"text\" --stackdriver-export-interval=30s', 
+      VALUES (1, '--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-logs.txt --log-format \"text\" --stackdriver-export-interval=30s', 
           'master', '2023-12-25 05:30:00+00');
   """
   results = client.query(query_insert_configuration)
@@ -197,7 +197,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   print(gcsfuse_flags)
   print(branch)
   print(end_date)
-  
+
   query_get_configuration_id = """
       SELECT configuration_id
       FROM gcsfuse-intern-project-2023.performance_metrics.experiment_configuration
@@ -214,6 +214,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   print(config_id)
 
   for values in values_all_jobs:
+    print(values)
     query_insert_into_fio_metrics = """
       INSERT INTO gcsfuse-intern-project-2023.performance_metrics.fio_metrics
       (configuration_id, test_type, num_threads, file_size_kb, start_time, end_time, iops, bandwidth_bytes_per_sec, IO_bytes, 

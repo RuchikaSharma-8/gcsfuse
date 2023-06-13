@@ -78,7 +78,7 @@ if __name__ == '__main__':
   # So, waiting for 360 seconds to ensure the returned metrics are not empty.
   # Intermittently custom metrics are not available after 240 seconds, hence
   # waiting for 360 secs instead of 240 secs
-  time.sleep(360)
+  time.sleep(240)
 
   vm_metrics_obj = vm_metrics.VmMetrics()
   vm_metrics_data = []
