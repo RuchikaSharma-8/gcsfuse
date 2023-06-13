@@ -201,15 +201,15 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   query_get_configuration_id = """
       SELECT configuration_id
       FROM gcsfuse-intern-project-2023.performance_metrics.experiment_configuration
-      WHERE gcsfuse_flags = @flags
-      AND branch = @br
-      AND end_date = @date
+      WHERE gcsfuse_flags = @gcsfuse_flags
+      AND branch = @branch
+      AND end_date = @end_date
   """
   job_config = bigquery.QueryJobConfig()
   job_config.query_parameters = [
-      bigquery.ScalarQueryParameter(gcsfuse_flags, 'STRING', flags),
-      bigquery.ScalarQueryParameter(branch, 'STRING', br),
-      bigquery.ScalarQueryParameter(end_date, 'TIMESTAMP', date)
+      bigquery.ScalarQueryParameter('gcsfuse_flags', 'STRING', gcsfuse_flags),
+      bigquery.ScalarQueryParameter('branch', 'STRING', branch),
+      bigquery.ScalarQueryParameter('end_date', 'TIMESTAMP', end_date)
   ]
 
   query_job = client.query(query_get_configuration_id, job_config=job_config)
