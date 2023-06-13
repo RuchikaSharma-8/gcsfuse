@@ -211,7 +211,7 @@ def write_ls_metrics_to_bigquery(gcsfuse_flags, branch, end_date, gcsfuse_values
 
   results = client.query(query_create_table_ls_metrics)
   print(results)
-  
+
   print(gcsfuse_flags)
   print(branch)
   print(end_date)

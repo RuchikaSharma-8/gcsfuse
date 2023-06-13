@@ -604,7 +604,7 @@ if __name__ == '__main__':
   vm_metrics_obj = vm_metrics.VmMetrics()
 
   gcsfuse_vm_metrics = []
-  persistent_disk_vm_metrics = []
+  pd_vm_metrics = []
 
   # Getting VM metrics for every listing test
   for folder in directory_structure.folders:
@@ -627,7 +627,7 @@ if __name__ == '__main__':
     peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
     mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
     print("Peak CPU utilization: ", peak_cpu_utilization, ", Mean CPU utilization: ", mean_cpu_utilization)
-    persistent_disk_vm_metrics.append([peak_cpu_utilization, mean_cpu_utilization])
+    pd_vm_metrics.append([peak_cpu_utilization, mean_cpu_utilization])
 
     print(f'Getting VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
     gcs_bucket_results_all_samples = start_and_end_times_ms_gcs_bucket[folder.name]
