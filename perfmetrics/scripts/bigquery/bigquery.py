@@ -188,7 +188,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
 
   query_insert_configuration = """
       INSERT INTO gcsfuse-intern-project-2023.performance_metrics.experiment_configuration 
-      VALUES (1, '--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-logs.txt --log-format \"text\" --stackdriver-export-interval=30s', 
+      VALUES (1, '--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file gcsfuse-logs.txt --log-format "text" --stackdriver-export-interval=30s', 
           'master', '2023-12-25 05:30:00+00');
   """
   results = client.query(query_insert_configuration)
