@@ -19,28 +19,6 @@ group_reporting=1
 allrandrepeat=1
 filename_format=$jobname.$jobnum.$filenum
 
-[1_thread]
-stonewall
-bs=16k
-directory=gcs/256kb
-filesize=256k
-numjobs=40
-
-[2_thread]
-stonewall
-startdelay=310
-bs=16k
-directory=gcs/256kb
-filesize=256k
-rw=write
-numjobs=40
-
-[3_thread]
-stonewall
-startdelay=500
-directory=gcs/3mb
-filesize=3M
-numjobs=40
 
 
 

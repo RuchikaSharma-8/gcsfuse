@@ -28,7 +28,7 @@ from google.cloud import monitoring_v3
 from gsheet import gsheet
 from typing import List
 
-PROJECT_NAME = 'projects/gcs-fuse-test'
+PROJECT_NAME = 'projects/gcsfuse-intern-project-2023'
 CPU_UTI_METRIC_TYPE = 'compute.googleapis.com/instance/cpu/utilization'
 RECEIVED_BYTES_COUNT_METRIC_TYPE = 'compute.googleapis.com/instance/network/received_bytes_count'
 OPS_LATENCY_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_latency'
@@ -347,7 +347,7 @@ class VmMetrics:
 
 
     # Getting updated metrics list:
-    updated_metrics_list = self._add_new_metric_using_test_type(test_type)
+    #updated_metrics_list = self._add_new_metric_using_test_type(test_type)
 
     # Extracting MetricPoint list for every metric in the updated_metrics_list:
     for metric in updated_metrics_list:

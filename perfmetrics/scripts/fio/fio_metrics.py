@@ -435,8 +435,8 @@ class FioMetrics:
 
     print(values)
 
-    #bigquery.write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values)
-    #gsheet.write_to_google_sheet(worksheet_name, values)
+    bigquery.write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values)
+    gsheet.write_to_google_sheet(worksheet_name, values)
 
   def get_metrics(self, filepath, gcsfuse_flags, branch, end_date, worksheet_name=None) -> List[Dict[str, Any]]:
     """Returns job metrics obtained from given filepath and writes to gsheets.
@@ -469,9 +469,10 @@ class FioMetrics:
 
     print("VALUES: ", values)
 
-    #self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date)
-    #if worksheet_name:
-    #  self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date, worksheet_name)
+    values = [['read', 40, 256, 1686639853, 1686639924, 4307.872914, 71278611, 4280565760, 0.001410746, 1.08750072, 0.5918785889132551, 0.541065216, 0.557842432, 0.69206016, 0.7088373760000001]]
+    self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date)
+    if worksheet_name:
+      self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date, worksheet_name)
 
     return job_metrics
 
