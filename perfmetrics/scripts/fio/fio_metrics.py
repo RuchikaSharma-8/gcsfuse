@@ -469,7 +469,6 @@ class FioMetrics:
 
     print("VALUES: ", values)
 
-    values = [['read', 40, 256, 1686639853, 1686639924, 4307.872914, 71278611, 4280565760, 0.001410746, 1.08750072, 0.5918785889132551, 0.541065216, 0.557842432, 0.69206016, 0.7088373760000001]]
     self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date)
     if worksheet_name:
       self._add_to_gsheet(job_metrics, gcsfuse_flags, branch, end_date, worksheet_name)

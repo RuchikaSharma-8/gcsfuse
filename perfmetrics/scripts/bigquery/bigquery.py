@@ -198,28 +198,39 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   print(branch)
   print(end_date)
 
-  query_get_configuration_id = """
-      SELECT configuration_id
-      FROM gcsfuse-intern-project-2023.performance_metrics.experiment_configuration
-      WHERE gcsfuse_flags = @gcsfuse_flags
-      AND branch = @branch
-      AND end_date = @end_date
-  """
-  job_config = bigquery.QueryJobConfig()
-  job_config.query_parameters = [
-      bigquery.ScalarQueryParameter('gcsfuse_flags', 'STRING', gcsfuse_flags),
-      bigquery.ScalarQueryParameter('branch', 'STRING', branch),
-      bigquery.ScalarQueryParameter('end_date', 'TIMESTAMP', end_date)
-  ]
+  query = ('SELECT configuration_id FROM `{}.{}.{}` WHERE gcsfuse_flags="{}" AND branch="{}" AND end_date="{}"'
+           .format('gcsfuse-intern-project-2023', 'performance_metrics', 'fio_metrics', gcsfuse_flags, branch, end_date))
 
-  query_job = client.query(query_get_configuration_id, job_config=job_config)
-  results = query_job.result()
-  config_id = 0
-  for row in results:
-    config_id = row.configuration_id
-    print(config_id)
-
-  print(config_id)
+  try:
+    query_job = client.query(query)
+    is_exist = len(list(query_job.result())) >= 1
+    print('Exist id' if is_exist else 'Not exist id')
+    return is_exist
+  except Exception as e:
+    print("Error")
+    print(e)
+  # query_get_configuration_id = """
+  #     SELECT configuration_id
+  #     FROM gcsfuse-intern-project-2023.performance_metrics.experiment_configuration
+  #     WHERE gcsfuse_flags = @gcsfuse_flags
+  #     AND branch = @branch
+  #     AND end_date = @end_date
+  # """
+  # job_config = bigquery.QueryJobConfig()
+  # job_config.query_parameters = [
+  #     bigquery.ScalarQueryParameter('gcsfuse_flags', 'STRING', gcsfuse_flags),
+  #     bigquery.ScalarQueryParameter('branch', 'STRING', branch),
+  #     bigquery.ScalarQueryParameter('end_date', 'TIMESTAMP', end_date)
+  # ]
+  #
+  # query_job = client.query(query_get_configuration_id, job_config=job_config)
+  # results = query_job.result()
+  # config_id = 0
+  # for row in results:
+  #   config_id = row.configuration_id
+  #   print(config_id)
+  #
+  # print(config_id)
 
   dataset_ref = client.dataset('performance_metrics')
 
@@ -248,19 +259,7 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   #   print(config_id)
   #
   # print(config_id)
-  #
-  # for values in values_all_jobs:
-  #   print(values)
-  #   query_insert_into_fio_metrics = """
-  #     INSERT INTO gcsfuse-intern-project-2023.performance_metrics.fio_metrics
-  #     (configuration_id, test_type, num_threads, file_size_kb, start_time, end_time, iops, bandwidth_bytes_per_sec, IO_bytes,
-  #       min_latency, max_latency, mean_latency, percentile_latency_20, percentile_latency_50, percentile_latency_90, percentile_latency_95)
-  #     VALUES(1, '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')
-  #   """.format(values[0], values[1], values[2], values[3], values[4], values[5],  values[6], values[7],
-  #              values[8], values[9], values[10], values[11], values[12], values[13], values[14])
 
-    results = client.query(query_insert_into_fio_metrics)
-    print(results)
 
 def write_vm_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jobs):
 
@@ -286,17 +285,18 @@ def write_vm_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_job
 
   print(config_id)
 
+  dataset_ref = client.dataset('performance_metrics')
+
+  table_ref = dataset_ref.table('vm_metrics')
+  table = client.get_table(table_ref)  # API call
+
   for values in values_all_jobs:
     print(values)
-    query_insert_into_vm_metrics = """
-      INSERT INTO gcsfuse-intern-project-2023.performance_metrics.vm_metrics
-      (configuration_id, end_time, cpu_utilization_peak_percentage, cpu_utilization_mean_percentage, received_bytes_peak_bytes_per_sec, 
-        received_bytes_mean_bytes_per_sec)
-      VALUES(1, '{}', '{}', '{}', '{}', '{}') 
-    """.format(values[1], values[2], values[3], values[4], values[5])
-
-    results = client.query(query_insert_into_vm_metrics)
-    print(results)
+    rows_to_insert = [
+        (1, values[1], values[2], values[3], values[4], values[5])
+    ]
+    errors = client.insert_rows(table, rows_to_insert)
+    print(errors)
 
 
 
