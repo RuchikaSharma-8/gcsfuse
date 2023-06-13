@@ -199,8 +199,6 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   print(end_date)
   end_date = TIMESTAMP(end_date)
   print(end_date)
-  # end_date = end_date + " UTC"
-  # print(end_date)
 
   query_get_configuration_id = """
       SELECT configuration_id
