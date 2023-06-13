@@ -569,6 +569,8 @@ if __name__ == '__main__':
       directory_structure.folders, persistent_disk_results, args.message[0],
       int(args.num_samples[0]))
 
+  print(gcs_parsed_metrics)
+  print(pd_parsed_metrics)
   # if args.upload:
   #   log.info('Uploading files to the Google Sheet.\n')
   #   _export_to_gsheet(
