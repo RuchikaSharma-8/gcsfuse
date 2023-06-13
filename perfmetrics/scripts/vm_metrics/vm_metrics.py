@@ -28,7 +28,7 @@ from google.cloud import monitoring_v3
 from gsheet import gsheet
 from typing import List
 
-PROJECT_NAME = 'projects/gcsfuse-intern-project-2023'
+PROJECT_NAME = 'projects/gcs-fuse-test'
 CPU_UTI_METRIC_TYPE = 'compute.googleapis.com/instance/cpu/utilization'
 RECEIVED_BYTES_COUNT_METRIC_TYPE = 'compute.googleapis.com/instance/network/received_bytes_count'
 OPS_LATENCY_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_latency'
@@ -112,7 +112,8 @@ REQUEST_COUNT_STAT_OBJECT = Metric(
     group_fields=['metric.labels'])
 
 METRICS_LIST = [
-    CPU_UTI_PEAK, CPU_UTI_MEAN, REC_BYTES_PEAK, REC_BYTES_MEAN
+    CPU_UTI_PEAK, CPU_UTI_MEAN, REC_BYTES_PEAK, REC_BYTES_MEAN,
+    READ_BYTES_COUNT, OPS_ERROR_COUNT
 ]
 
 
