@@ -185,30 +185,30 @@ def write_ls_metrics_to_bigquery(gcsfuse_flags, branch, end_date, gcsfuse_values
   # Instantiate a BigQuery client
   client = bigquery.Client()
 
-  query_create_table_ls_metrics = """
-      CREATE OR REPLACE TABLE gcsfuse-intern-project-2023.performance_metrics.ls_metrics(
-        configuration_id INT64,
-        test_type STRING, 
-        num_files INT64, 
-        num_samples INT64, 
-        min_latency_msec FLOAT64,
-        max_latency_msec FLOAT64,
-        mean_latency_msec FLOAT64, 
-        median_latency_msec FLOAT64, 
-        standard_dev_msec FLOAT64, 
-        percentile_latency_20 FLOAT64, 
-        percentile_latency_50 FLOAT64, 
-        percentile_latency_90 FLOAT64, 
-        percentile_latency_95 FLOAT64, 
-        cpu_utilization_peak_percentage FLOAT64, 
-        cpu_utilization_mean_percentage FLOAT64,
-        memory_utilization_ram FLOAT64, 
-        FOREIGN KEY(configuration_id) REFERENCES performance_metrics.experiment_configuration (configuration_id) NOT ENFORCED
-      ) OPTIONS (description = 'Table for storing GCSFUSE metrics extracted from listing benchmark tests');
-  """
-
-  results = client.query(query_create_table_ls_metrics)
-  print(results)
+  # query_create_table_ls_metrics = """
+  #     CREATE OR REPLACE TABLE gcsfuse-intern-project-2023.performance_metrics.ls_metrics(
+  #       configuration_id INT64,
+  #       test_type STRING,
+  #       num_files INT64,
+  #       num_samples INT64,
+  #       min_latency_msec FLOAT64,
+  #       max_latency_msec FLOAT64,
+  #       mean_latency_msec FLOAT64,
+  #       median_latency_msec FLOAT64,
+  #       standard_dev_msec FLOAT64,
+  #       percentile_latency_20 FLOAT64,
+  #       percentile_latency_50 FLOAT64,
+  #       percentile_latency_90 FLOAT64,
+  #       percentile_latency_95 FLOAT64,
+  #       cpu_utilization_peak_percentage FLOAT64,
+  #       cpu_utilization_mean_percentage FLOAT64,
+  #       memory_utilization_ram FLOAT64,
+  #       FOREIGN KEY(configuration_id) REFERENCES performance_metrics.experiment_configuration (configuration_id) NOT ENFORCED
+  #     ) OPTIONS (description = 'Table for storing GCSFUSE metrics extracted from listing benchmark tests');
+  # """
+  #
+  # results = client.query(query_create_table_ls_metrics)
+  # print(results)
 
   print(gcsfuse_flags)
   print(branch)
