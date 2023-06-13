@@ -361,6 +361,7 @@ class VmMetrics:
         row.append(metric.metric_point_list[i].value)
       metrics_data.append(row)
 
+    print("METRICS DATA: ", metrics_data)
     return metrics_data
 
   def fetch_metrics_and_write_to_google_sheet(self, start_time_sec,

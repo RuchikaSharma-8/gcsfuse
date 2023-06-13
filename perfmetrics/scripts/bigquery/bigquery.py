@@ -207,8 +207,8 @@ def write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values_all_jo
   """.format(gcsfuse_flags, branch, end_date)
   results = client.query(query_get_configuration_id)
   config_id = 0
-  for row in results.result():
-    config_id = row.configuration_id
+  for row in results:
+    config_id = row['configuration_id']
     print(config_id)
 
   print(config_id)
