@@ -569,8 +569,6 @@ if __name__ == '__main__':
       directory_structure.folders, persistent_disk_results, args.message[0],
       int(args.num_samples[0]))
 
-  print(gcs_parsed_metrics)
-  print(pd_parsed_metrics)
   # if args.upload:
   #   log.info('Uploading files to the Google Sheet.\n')
   #   _export_to_gsheet(
@@ -579,6 +577,79 @@ if __name__ == '__main__':
   #   _export_to_gsheet(
   #       directory_structure.folders, pd_parsed_metrics, args.command[0],
   #       WORKSHEET_NAME_PD)
+
+  # Changing directory to comply with "cred.json" path in "gsheet.py".
+  metrics = gcs_parsed_metrics
+  command = args.command[0]
+  folders = directory_structure.folders
+  os.chdir('..')
+  gsheet_data = []
+  for testing_folder in folders:
+    num_files, num_folders = _count_number_of_files_and_folders(
+        testing_folder, 0, 0)
+    row = [
+        metrics[testing_folder.name]['Test Desc.'],
+        command,
+        num_files,
+        num_folders,
+        metrics[testing_folder.name]['Number of samples'],
+        metrics[testing_folder.name]['Mean'],
+        metrics[testing_folder.name]['Median'],
+        metrics[testing_folder.name]['Standard Dev'],
+        metrics[testing_folder.name]['Quantiles']['0 %ile'],
+        metrics[testing_folder.name]['Quantiles']['20 %ile'],
+        metrics[testing_folder.name]['Quantiles']['50 %ile'],
+        metrics[testing_folder.name]['Quantiles']['90 %ile'],
+        metrics[testing_folder.name]['Quantiles']['95 %ile'],
+        metrics[testing_folder.name]['Quantiles']['98 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99.5 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99.9 %ile'],
+        metrics[testing_folder.name]['Quantiles']['100 %ile']
+    ]
+    gsheet_data.append(row)
+
+  print(gsheet_data)
+  os.chdir('./ls_metrics')  # Changing the directory back to current directory.
+
+
+
+  # Changing directory to comply with "cred.json" path in "gsheet.py".
+
+  metrics = pd_parsed_metrics
+  command = args.command[0]
+  folders = directory_structure.folders
+  os.chdir('..')
+  gsheet_data = []
+  for testing_folder in folders:
+    num_files, num_folders = _count_number_of_files_and_folders(
+        testing_folder, 0, 0)
+    row = [
+        metrics[testing_folder.name]['Test Desc.'],
+        command,
+        num_files,
+        num_folders,
+        metrics[testing_folder.name]['Number of samples'],
+        metrics[testing_folder.name]['Mean'],
+        metrics[testing_folder.name]['Median'],
+        metrics[testing_folder.name]['Standard Dev'],
+        metrics[testing_folder.name]['Quantiles']['0 %ile'],
+        metrics[testing_folder.name]['Quantiles']['20 %ile'],
+        metrics[testing_folder.name]['Quantiles']['50 %ile'],
+        metrics[testing_folder.name]['Quantiles']['90 %ile'],
+        metrics[testing_folder.name]['Quantiles']['95 %ile'],
+        metrics[testing_folder.name]['Quantiles']['98 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99.5 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99.9 %ile'],
+        metrics[testing_folder.name]['Quantiles']['100 %ile']
+    ]
+    gsheet_data.append(row)
+
+  print(gsheet_data)
+  os.chdir('./ls_metrics')  # Changing the directory back to current directory.
+
+
 
   print('Waiting for 360 seconds for metrics to be updated on VM...')
   # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
