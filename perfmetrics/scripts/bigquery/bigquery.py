@@ -224,7 +224,7 @@ def write_ls_metrics_to_bigquery(gcsfuse_flags, branch, end_date, gcsfuse_values
     print(row1)
     print(row2)
     rows_to_insert = [
-        (1, 'gcsfuse', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1], ''),
+        (1, 'gcsfuse', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1]),
     ]
     errors = client.insert_rows(table, rows_to_insert)
     print(errors)
@@ -233,7 +233,7 @@ def write_ls_metrics_to_bigquery(gcsfuse_flags, branch, end_date, gcsfuse_values
     print(row1)
     print(row2)
     rows_to_insert = [
-        (1, 'disk', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1], ''),
+        (1, 'disk', row1[2], row1[4], row1[8], row1[17], row1[5], row1[6], row1[7], row1[9], row1[10], row1[11], row1[12], row2[0], row2[1]),
     ]
     errors = client.insert_rows(table, rows_to_insert)
     print(errors)
