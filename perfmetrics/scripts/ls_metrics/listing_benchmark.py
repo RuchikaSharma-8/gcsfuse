@@ -44,6 +44,7 @@ from gsheet import gsheet
 from vm_metrics import vm_metrics
 from bigquery import bigquery
 import numpy as np
+import fetch_metrics
 
 
 logging.basicConfig(
@@ -53,8 +54,8 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
-INSTANCE = socket.gethostname()
-PERIOD_SEC = 120
+INSTANCE = fetch_metrics.INSTANCE
+PERIOD_SEC = fetch_metrics.PERIOD_SEC
 WORKSHEET_NAME_GCS = 'ls_metrics_gcsfuse'
 WORKSHEET_NAME_PD = 'ls_metrics_persistent_disk'
 
@@ -121,7 +122,7 @@ def _export_to_gsheet(folders, metrics, command) -> list:
   return gsheet_data
 
 
-def _parse_results(folders, results_list, message, num_samples) -> dict:
+def _parse_results(folders, result_list, message, num_samples) -> dict:
   """Outputs the results on the console.
 
   This function takes in dictionary containing the list of results (for all
@@ -143,6 +144,11 @@ def _parse_results(folders, results_list, message, num_samples) -> dict:
   Returns:
     A dictionary containing the various metrics in a JSON format.
   """
+
+  # Dictionary containing the latencies (for all samples) for each testing folder
+  results_list = {}
+  for testing_folder in folders:
+    results_list[testing_folder.name] = [row[1] - row[0] for row in result_list[testing_folder.name]]
 
   metrics = dict()
 
@@ -183,20 +189,17 @@ def _record_time_of_operation(command, path, num_samples) -> list:
     A list containing the latencies of operations in milisecond.
   """
 
-  result_list= []
-  start_and_end_time_sec_list = []
+  result_list = []
+
   for _ in range(num_samples):
-    time_list = []
     start_time_sec = time.time()
     subprocess.call('{} {}'.format(command, path), shell=True,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)
     end_time_sec = time.time()
-    time_list.append(start_time_sec)
-    time_list.append(end_time_sec)
-    result_list.append((end_time_sec-start_time_sec)*1000)
-    start_and_end_time_sec_list.append(time_list)
-  return result_list, start_and_end_time_sec_list
+    result_list.append([start_time_sec, end_time_sec])
+
+  return result_list
 
 
 def _perform_testing(
@@ -225,21 +228,19 @@ def _perform_testing(
 
   gcs_bucket_results = {}
   persistent_disk_results = {}
-  start_and_end_time_sec_persistent_disk = {}
-  start_and_end_time_sec_gcs_bucket = {}
 
   for testing_folder in folders:
     log.info('Testing started for testing folder: %s\n', testing_folder.name)
     local_dir_path = './{}/{}/'.format(persistent_disk, testing_folder.name)
     gcs_bucket_path = './{}/{}/'.format(gcs_bucket, testing_folder.name)
 
-    persistent_disk_results[testing_folder.name], start_and_end_time_sec_persistent_disk[testing_folder.name]  = _record_time_of_operation(
+    persistent_disk_results[testing_folder.name] = _record_time_of_operation(
         command, local_dir_path, num_samples)
-    gcs_bucket_results[testing_folder.name], start_and_end_time_sec_gcs_bucket[testing_folder.name] = _record_time_of_operation(
+    gcs_bucket_results[testing_folder.name] = _record_time_of_operation(
         command, gcs_bucket_path, num_samples)
 
   log.info('Testing completed. Generating output.\n')
-  return gcs_bucket_results, persistent_disk_results, start_and_end_time_sec_persistent_disk, start_and_end_time_sec_gcs_bucket
+  return gcs_bucket_results, persistent_disk_results
 
 
 def _create_directory_structure(
@@ -508,6 +509,24 @@ def _check_dependencies(packages) -> None:
 
   return
 
+def _extract_vm_metrics(results_list, folders) -> list:
+
+  vm_metrics_obj = vm_metrics.VmMetrics()
+  vm_metrics_data = []
+
+  # Getting VM metrics for listing tests on each folder
+  for testing_folder in folders:
+
+    # Getting start and end times for all 30 samples
+    start_time_first_sample = results_list[testing_folder][0][0]
+    end_time_last_sample = results_list[testing_folder][:][1]
+
+    metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
+                                                INSTANCE, PERIOD_SEC, 'list')
+
+    vm_metrics_data.append(metrics_data)
+
+  return vm_metrics_data
 
 if __name__ == '__main__':
   argv = sys.argv
@@ -573,7 +592,7 @@ if __name__ == '__main__':
 
   gcs_bucket = _mount_gcs_bucket(directory_structure.name, args.gcsfuse_flags[0])
 
-  gcs_bucket_results, persistent_disk_results, start_and_end_times_ms_persistent_disk, start_and_end_times_ms_gcs_bucket = _perform_testing(
+  gcs_bucket_results, persistent_disk_results = _perform_testing(
       directory_structure.folders, gcs_bucket, persistent_disk,
       int(args.num_samples[0]), args.command[0])
 
@@ -593,68 +612,29 @@ if __name__ == '__main__':
   #       directory_structure.folders, pd_parsed_metrics, args.command[0],
   #       WORKSHEET_NAME_PD)
 
-
   print('Waiting for 360 seconds for metrics to be updated on VM...')
   # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
   # So, waiting for 360 seconds to ensure the returned metrics are not empty.
   # Intermittently custom metrics are not available after 240 seconds, hence
   # waiting for 360 secs instead of 240 secs
-  time.sleep(240)
+  time.sleep(360)
 
-  vm_metrics_obj = vm_metrics.VmMetrics()
+  gcs_results = _extract_vm_metrics(gcs_bucket_results, directory_structure.folders)
+  pd_results = _extract_vm_metrics(persistent_disk_results, directory_structure.folders)
 
-  gcsfuse_vm_metrics = []
-  pd_vm_metrics = []
-
-  # Getting VM metrics for every listing test
   for folder in directory_structure.folders:
+    print(f'VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
+    print("Peak CPU utilization: ", gcs_results[folder.name][2], ", Mean CPU utilization: ", gcs_results[folder.name][3])
 
-    persistent_disk_results_all_samples = start_and_end_times_ms_persistent_disk[folder.name]
-    print(f'Getting VM metrics for listing tests (persistent disk) for folder {folder.name}...')
-    vm_metrics_data = []
+    print(f'VM metrics for listing tests (persistent disk) for folder: {folder.name}...')
+    print("Peak CPU utilization: ", pd_results[folder.name][2], ", Mean CPU utilization: ", pd_results[folder.name][3])
 
-    for result in persistent_disk_results_all_samples:
-      start_time = result[0]
-      end_time = result[1]
-
-      metrics_data = vm_metrics_obj.fetch_metrics(start_time, end_time,
-                                                  INSTANCE, PERIOD_SEC, 'list')
-
-      for row in metrics_data:
-        vm_metrics_data.append(row)
-
-    vm_metrics_data_array = np.array(vm_metrics_data)
-    peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
-    mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
-    print("Peak CPU utilization: ", peak_cpu_utilization, ", Mean CPU utilization: ", mean_cpu_utilization)
-    pd_vm_metrics.append([peak_cpu_utilization, mean_cpu_utilization])
-
-    print(f'Getting VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
-    gcs_bucket_results_all_samples = start_and_end_times_ms_gcs_bucket[folder.name]
-    vm_metrics_data = []
-
-    for result in gcs_bucket_results_all_samples:
-      start_time = result[0]
-      end_time = result[1]
-
-      metrics_data = vm_metrics_obj.fetch_metrics(start_time, end_time,
-                                                  INSTANCE, PERIOD_SEC, 'list')
-
-      for row in metrics_data:
-        vm_metrics_data.append(row)
-
-    vm_metrics_data_array = np.array(vm_metrics_data)
-    peak_cpu_utilization = np.max(vm_metrics_data_array[:, 2])
-    mean_cpu_utilization = np.mean(vm_metrics_data_array[:, 3])
-    print("Peak CPU utilization: ", peak_cpu_utilization, ", Mean CPU utilization: ", mean_cpu_utilization)
-    gcsfuse_vm_metrics.append([peak_cpu_utilization, mean_cpu_utilization])
-
-  gcsfuse_metrics = _export_to_gsheet(
-        directory_structure.folders, gcs_parsed_metrics, args.command[0])
-  pd_metrics = _export_to_gsheet(
-        directory_structure.folders, pd_parsed_metrics, args.command[0])
-
-  bigquery.write_ls_metrics_to_bigquery(args.gcsfuse_flags[0], args.branch[0], args.end_date[0], gcsfuse_metrics, pd_metrics, gcsfuse_vm_metrics, pd_vm_metrics)
+  # gcsfuse_metrics = _export_to_gsheet(
+  #     directory_structure.folders, gcs_parsed_metrics, args.command[0])
+  # pd_metrics = _export_to_gsheet(
+  #     directory_structure.folders, pd_parsed_metrics, args.command[0])
+  #
+  # bigquery.write_ls_metrics_to_bigquery(args.gcsfuse_flags[0], args.branch[0], args.end_date[0], gcsfuse_metrics, pd_metrics, gcsfuse_vm_metrics, pd_vm_metrics)
 
   if not args.keep_files:
     log.info('Deleting files from persistent disk.\n')
