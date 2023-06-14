@@ -525,7 +525,7 @@ def _extract_vm_metrics(results_list, folders) -> list:
                                                 INSTANCE, PERIOD_SEC, 'list')
 
     for row in metrics_data:
-      vm_metrics_data[testing_folder.name].append(row)
+      vm_metrics_data[testing_folder.name] = row
 
   return vm_metrics_data
 
