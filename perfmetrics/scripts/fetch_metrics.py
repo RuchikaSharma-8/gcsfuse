@@ -65,7 +65,7 @@ if __name__ == '__main__':
   argv = sys.argv
 
   bigquery_obj = bigquery.BigQuery()
-  bigquery.setup_bigquery()
+  bigquery_obj.setup_bigquery()
 
   fio_metrics_obj = fio_metrics.FioMetrics()
   print('Getting fio metrics...')
