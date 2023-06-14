@@ -8,11 +8,24 @@ VM_TABLE_ID = 'vm_metrics'
 LS_TABLE_ID = 'ls_metrics'
 
 class BigQuery():
-
   def setup_bigquery(self):
 
-    # Construct a BigQuery client object.
+    # Construct a BigQuery client object
     client = bigquery.Client()
+
+    # Create the dataset in the project
+    dataset = client.create_dataset(DATASET_ID)
+
+    # Query for creating experiment_configuration table
+    query_create_table_experiment_configuration = """
+        CREATE OR REPLACE TABLE {}.{}.{}(
+          configuration_id INT64,
+          gcsfuse_flags STRING,
+          branch STRING,
+          end_date TIMESTAMP,
+          PRIMARY KEY (configuration_id) NOT ENFORCED
+        ) OPTIONS (description = 'Table for storing Job Configurations and respective VM instance name on which the job was run');
+    """.format(PROJECT_ID, DATASET_ID, CONFIGURATION_TABLE_ID)
 
     # Query for creating fio_metrics table
     query_create_table_fio_metrics = """
