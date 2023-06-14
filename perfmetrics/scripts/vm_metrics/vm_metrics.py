@@ -307,6 +307,10 @@ class VmMetrics:
     elif test_type == 'write' or test_type == 'randwrite':
       fs_op = 'WriteFile'
 
+    if test_type == 'list':
+      updated_metrics_list = list(METRICS_LIST_SUBSET)
+      return updated_metrics_list
+
     updated_metrics_list = list(METRICS_LIST)
 
     # Creating a new metric that requires test_type and adding it to the updated_metrics_list:
@@ -340,13 +344,8 @@ class VmMetrics:
     """
     self._validate_start_end_times(start_time_sec, end_time_sec)
 
-    updated_metrics_list = METRICS_LIST
-    if test_type == 'list':
-      updated_metrics_list = METRICS_LIST_SUBSET
-
-
     # Getting updated metrics list:
-    #updated_metrics_list = self._add_new_metric_using_test_type(test_type)
+    updated_metrics_list = self._add_new_metric_using_test_type(test_type)
 
     # Extracting MetricPoint list for every metric in the updated_metrics_list:
     for metric in updated_metrics_list:
