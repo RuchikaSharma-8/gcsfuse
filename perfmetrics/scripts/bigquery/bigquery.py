@@ -105,6 +105,8 @@ class BigQuery():
     """.format(PROJECT_ID, DATASET_ID, LS_TABLE_ID, DATASET_ID, CONFIGURATION_TABLE_ID)
 
     # Executing the queries
+    results = client.query(query_create_table_experiment_configuration)
+    print(results)
     results = client.query(query_create_table_fio_metrics)
     print(results)
     results = client.query(query_create_table_vm_metrics)
