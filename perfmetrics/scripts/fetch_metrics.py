@@ -7,6 +7,7 @@ import argparse
 from fio import fio_metrics
 from vm_metrics import vm_metrics
 from gsheet import gsheet
+from bigquery import bigquery
 
 INSTANCE = socket.gethostname()
 PERIOD_SEC = 120
@@ -62,6 +63,9 @@ def _parse_arguments(argv):
 
 if __name__ == '__main__':
   argv = sys.argv
+
+  bigquery_obj = bigquery.BigQuery()
+  bigquery.setup_bigquery()
 
   fio_metrics_obj = fio_metrics.FioMetrics()
   print('Getting fio metrics...')
