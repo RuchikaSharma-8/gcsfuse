@@ -524,7 +524,8 @@ def _extract_vm_metrics(results_list, folders) -> list:
     metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
                                                 INSTANCE, PERIOD_SEC, 'list')
 
-    vm_metrics_data.append(metrics_data)
+    for row in metrics_data:
+      vm_metrics_data.append(row)
 
   return vm_metrics_data
 
