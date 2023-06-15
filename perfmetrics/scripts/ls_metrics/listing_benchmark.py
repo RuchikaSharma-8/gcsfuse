@@ -520,7 +520,7 @@ def _extract_vm_metrics(results_list, folders) -> list:
     # Getting start and end times for all 30 samples
     start_time_first_sample = results_list[testing_folder.name][0][0]
     end_time_last_sample = results_list[testing_folder.name][-1][-1]
-
+    print(end_time_last_sample - start_time_first_sample)
     metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
                                                 INSTANCE, PERIOD_SEC, 'list')
 
