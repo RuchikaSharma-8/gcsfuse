@@ -337,7 +337,7 @@ class FioMetrics:
 
     for job in params:
       BLOCK_SIZE_KB.append(job['bs_kb'])
-      job.pop()
+      job.pop('bs_kb')
     print(BLOCK_SIZE_KB)
     print("PARAMS: ", params)
     return params
