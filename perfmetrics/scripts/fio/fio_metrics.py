@@ -73,7 +73,13 @@ REQ_JOB_PARAMS.append(JobParam(consts.THREADS, consts.NUMJOBS,
 REQ_JOB_PARAMS.append(
     JobParam(
         consts.FILESIZE_KB, consts.FILESIZE,
-        lambda val: _convert_value(val, consts.FILESIZE_TO_KB_CONVERSION), 0))
+        lambda val: _convert_value(val, consts.CONVERSION_TO_KB), 0))
+
+REQ_JOB_PARAMS.append(
+    JobParam(
+        consts.BLOCKSIZE_KB, consts.BLOCKSIZE,
+        lambda val: _convert_value(val, consts.CONVERSION_TO_KB), 0))
+
 # append new params here
 
 REQ_JOB_METRICS = []
@@ -291,7 +297,7 @@ class FioMetrics:
               name= FILESIZE_KB,
               json_name= FILESIZE,
               format_param=lambda val: _convert_value(val,
-              consts.FILESIZE_TO_KB_CONVERSION),
+              consts.CONVERSION_TO_KB),
               default = 0
           )
       ]
