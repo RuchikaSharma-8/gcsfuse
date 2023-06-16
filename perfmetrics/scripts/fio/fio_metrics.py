@@ -9,6 +9,8 @@
 
 """
 
+BLOCK_SIZE_KB = 0
+
 from dataclasses import dataclass
 import json
 import re
@@ -324,6 +326,7 @@ class FioMetrics:
       curr_job_params = {}
       if consts.JOB_OPTS in job:
         for param in REQ_JOB_PARAMS:
+          print(param)
           # If the param is not present in job options, global param is used
           if param.json_name in job[consts.JOB_OPTS]:
             curr_job_params[param.name] = param.format_param(
@@ -332,6 +335,9 @@ class FioMetrics:
             curr_job_params[param.name] = global_params[param.name]
 
       params.append(curr_job_params)
+
+    BLOCK_SIZE_KB = params[-1]
+    print(BLOCK_SIZE_KB)
     print("PARAMS: ", params)
     return params
 
@@ -441,7 +447,7 @@ class FioMetrics:
 
     print(values)
 
-    bigquery.write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values)
+    #bigquery.write_fio_metrics_to_bigquery(gcsfuse_flags, branch, end_date, values)
     #gsheet.write_to_google_sheet(worksheet_name, values)
 
   def get_metrics(self, filepath, gcsfuse_flags, branch, end_date, worksheet_name=None) -> List[Dict[str, Any]]:
