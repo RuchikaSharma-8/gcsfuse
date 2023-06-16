@@ -14,7 +14,7 @@ client = bigquery.Client()
 
 class BigQuery():
 
-  def insert_config_and_get_config_id(self, gcsfuse_flags, branch, end_date) -> int:
+  def _insert_config_and_get_config_id(self, gcsfuse_flags, branch, end_date) -> int:
 
     """Gets the experiment configuration and checks if it is already present in the BigQuery tables,
        If not present: New configuration will be inserted, and it's configuration id will be returned
@@ -74,7 +74,7 @@ class BigQuery():
 
     return config_id
 
-  def setup_bigquery(self):
+  def _setup_bigquery(self):
 
     """Creates the tables to store the metrics data if they don't exist in the dataset
     """
@@ -162,6 +162,45 @@ class BigQuery():
     print(results)
     results = client.query(query_create_table_ls_metrics)
     print(results)
+
+  def _export_fio_metrics_to_bigquery(self, config_id, start_time_build, fio_metrics):
+
+    dataset_ref = client.dataset(DATASET_ID)
+    table_ref = dataset_ref.table(FIO_TABLE_ID)
+    table = client.get_table(table_ref)
+
+    for row in fio_metrics:
+      rows_to_insert = [
+         (config_id, start_time_build, row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], row[13], row[14], row[15])
+      ]
+      result = client.insert_rows(table, rows_to_insert)
+      print(result)
+
+  def _export_vm_metrics_to_bigquery(self, config_id, start_time_build, vm_metrics):
+
+    dataset_ref = client.dataset(DATASET_ID)
+    table_ref = dataset_ref.table(VM_TABLE_ID)
+    table = client.get_table(table_ref)
+
+    for row in vm_metrics:
+      rows_to_insert = [
+          (config_id, start_time_build, row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], None, None, None, None, None, None, None, None)
+      ]
+      result = client.insert_rows(table, rows_to_insert)
+      print(result)
+
+  def _export_ls_metrics_to_bigquery(self, test_type, config_id, start_time_build, ls_metrics):
+
+    dataset_ref = client.dataset(DATASET_ID)
+    table_ref = dataset_ref.table(LS_TABLE_ID)
+    table = client.get_table(table_ref)
+
+    for row in ls_metrics:
+      rows_to_insert = [
+          (config_id, start_time_build, row[1], row[2], row[4], row[8], row[17], row[5], row[6], row[7], row[9], row[10], row[11], row[12], row[13], row[18], row[19], None)
+      ]
+      result = client.insert_rows(table, rows_to_insert)
+      print(result)
 
 
 def _parse_arguments(argv):

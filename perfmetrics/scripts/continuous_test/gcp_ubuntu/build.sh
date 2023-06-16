@@ -53,20 +53,21 @@ gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
 
 BRANCH="master"
 END_DATE="2023-12-25 05:30:00"
+START_TIME_BUILD=d=`date '+%Y-%m-%d %T'`
 
 cd "./bigquery"
 echo Installing requirements..
 pip install --require-hashes -r requirements.txt --user
-config_id=$(eval "python3 bigquery.py --gcsfuse_flags '$GCSFUSE_FLAGS' --branch '$BRANCH' --end_date '$END_DATE'")
+CONFIG_ID=$(eval "python3 bigquery.py --gcsfuse_flags '$GCSFUSE_FLAGS' --branch '$BRANCH' --end_date '$END_DATE'")
 
 # Executing perf tests
 cd ".."
 chmod +x run_load_test_and_fetch_metrics.sh
-./run_load_test_and_fetch_metrics.sh "$config_id"
+./run_load_test_and_fetch_metrics.sh "$CONFIG_ID" "$START_TIME_BUILD"
 
 sudo umount $MOUNT_POINT
 
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
-./run_ls_benchmark.sh "$config_id"
+./run_ls_benchmark.sh "$CONFIG_ID" "$START_TIME_BUILD"

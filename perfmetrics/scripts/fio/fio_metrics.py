@@ -14,9 +14,11 @@ import json
 import re
 import sys
 from typing import Any, Dict, List, Tuple, Callable
+import argparse
 
 from fio import constants as consts
 from gsheet import gsheet
+from bigquery import bigquery
 
 
 @dataclass(frozen=True)
@@ -72,7 +74,12 @@ REQ_JOB_PARAMS.append(JobParam(consts.THREADS, consts.NUMJOBS,
 REQ_JOB_PARAMS.append(
     JobParam(
         consts.FILESIZE_KB, consts.FILESIZE,
-        lambda val: _convert_value(val, consts.FILESIZE_TO_KB_CONVERSION), 0))
+        lambda val: _convert_value(val, consts.SIZE_TO_KB_CONVERSION), 0))
+
+REQ_JOB_PARAMS.append(
+    JobParam(
+        consts.BLOCKSIZE_KB, consts.BLOCKSIZE,
+        lambda val: _convert_value(val, consts.SIZE_TO_KB_CONVERSION), 0))
 # append new params here
 
 REQ_JOB_METRICS = []
@@ -412,12 +419,11 @@ class FioMetrics:
 
     return all_jobs
 
-  def _add_to_gsheet(self, jobs, worksheet_name):
-    """Add the metric values to respective columns in a google sheet.
+  def _get_values_to_export(self, jobs) -> list:
+    """Get the metrics values is a list to export to Google Spreadsheet and BigQuery.
 
     Args:
       jobs: list of dicts, contains required metrics for each job
-      worksheet_name: str, worksheet where job metrics should be written.
     """
 
     values = []
@@ -432,11 +438,9 @@ class FioMetrics:
         row.append(metric_val)
       values.append(row)
 
-    gsheet.write_to_google_sheet(worksheet_name, values)
+    return values
 
-  def get_metrics(self,
-                  filepath,
-                  worksheet_name=None) -> List[Dict[str, Any]]:
+  def get_metrics(self, filepath, config_id, start_time_build, worksheet_name=None) -> List[Dict[str, Any]]:
     """Returns job metrics obtained from given filepath and writes to gsheets.
 
     Args:
@@ -452,18 +456,59 @@ class FioMetrics:
     fio_out = self._load_file_dict(filepath)
     job_metrics = self._extract_metrics(fio_out)
     if worksheet_name:
-      self._add_to_gsheet(job_metrics, worksheet_name)
+      values = self._get_values_to_export(job_metrics)
+
+      # Write FIO metrics to Google Spreadsheets
+      gsheet.write_to_google_sheet(worksheet_name, values)
+      # Write FIO metrics to BigQuery
+      bigquery_obj = bigquery.BigQuery()
+      bigquery_obj.setup_bigquery()
+      bigquery_obj._export_fio_metrics_to_bigquery(config_id, start_time_build, values)
 
     return job_metrics
 
+def _parse_arguments(argv):
+  """Parses the arguments provided to the script via command line.
+
+  Args:
+    argv: List of arguments received by the script.
+
+  Returns:
+    A class containing the parsed arguments.
+  """
+  argv = sys.argv
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      'fio_json_output_path',
+      help='Provide path of the output json file.',
+      action='store'
+  )
+  parser.add_argument(
+      '--config_id',
+      help='Configuration id of the experiment in the BigQuery tables',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+  parser.add_argument(
+      '--start_time_build',
+      help='Time at which KOKORO triggered the build script.',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+
+  return parser.parse_args(argv[1:])
+
 if __name__ == '__main__':
   argv = sys.argv
-  if len(argv) != 2:
+  args = _parse_arguments(argv)
+  if len(argv) != 4:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 -m fio.fio_metrics <fio output json filepath>')
+                    'python3 -m fio.fio_metrics --config_id CONFIG_ID --start_time_build START_TIME_BUILD <fio output json filepath>')
 
   fio_metrics_obj = FioMetrics()
-  temp = fio_metrics_obj.get_metrics(argv[1], 'fio_metrics_expt')
+  temp = fio_metrics_obj.get_metrics(args.fio_output_json_path, args.config_id[0], args.start_time_build[0], 'fio_metrics_expt')
   print(temp)
 

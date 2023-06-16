@@ -9,7 +9,7 @@ and also through which multiple tests of different configurations can be
 performed in a single run.
 
 Typical usage example:
-  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --command COMMAND config_file
+  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file
 
   Flag -h: Typical help interface of the script.
   Flag --keep_files: Do not delete the generated directory structure from the
@@ -17,7 +17,9 @@ Typical usage example:
   Flag --upload: Uploads the results of the test to the Google Sheet.
   Flag --num_samples: Runs each test for NUM_SAMPLES times.
   Flag --message: Takes input a message string, which describes/titles the test.
-  Flag --command (required): Takes a input a string, which is the command to run
+  Flag --config_id (required): Configuration if of the experiment in BigQuery tables.
+  Flag --start_time_build (required): Time at which KOKORO triggered the build scripts
+  Flag --command (required): Takes as input a string, which is the command to run
                              the tests on.
   config_file (required): Path to the JSON config file which contains the
                           details of the tests.
@@ -41,6 +43,8 @@ from google.protobuf.json_format import ParseDict
 from gsheet import gsheet
 from bigquery import bigquery
 import numpy as np
+from vm_metrics import vm_metrics
+import fetch_metrics
 
 
 logging.basicConfig(
@@ -50,6 +54,8 @@ logging.basicConfig(
 )
 log = logging.getLogger()
 
+INSTANCE = fetch_metrics.INSTANCE
+PERIOD_SEC = fetch_metrics.PERIOD_SEC
 WORKSHEET_NAME_GCS = 'ls_metrics_gcsfuse'
 WORKSHEET_NAME_PD = 'ls_metrics_persistent_disk'
 
@@ -73,14 +79,13 @@ def _count_number_of_files_and_folders(directory, files, folders):
   return files, folders
 
 
-def _export_to_gsheet(folders, metrics, command, worksheet) -> None:
-  """Exports data to the Google Sheet.
+def _get_values_to_export(folders, metrics, command) -> list:
+  """Returns values to export to Google Sheet and BigQuery.
   Args:
     folders: List containing protobufs of testing folders.
     metrics: A dictionary containing all the result metrics for each
              testing folder.
     command: Command to run the tests on.
-    worksheet: Google Sheet worksheet to upload the data.
   """
 
   # Changing directory to comply with "cred.json" path in "gsheet.py".
@@ -116,7 +121,7 @@ def _export_to_gsheet(folders, metrics, command, worksheet) -> None:
   return
 
 
-def _parse_results(folders, results_list, message, num_samples) -> dict:
+def _parse_results(folders, result_list, message, num_samples) -> dict:
   """Outputs the results on the console.
 
   This function takes in dictionary containing the list of results (for all
@@ -130,14 +135,19 @@ def _parse_results(folders, results_list, message, num_samples) -> dict:
 
   Args:
     folders: List containing protobufs of testing folders.
-    results_list: Dictionary containing the list of results (for all samples)
-                  for each testing folder.
+    result_list: Dictionary containing the list of start and end times
+                 (for all samples) for each testing folder.
     message: String which describes/titles the test.
     num_samples: Number of samples to collect for each test.
 
   Returns:
     A dictionary containing the various metrics in a JSON format.
   """
+
+  # Dictionary containing the latencies (for all samples) for each testing folder
+  results_list = {}
+  for testing_folder in folders:
+    results_list[testing_folder.name] = [row[1] - row[0] for row in result_list[testing_folder.name]]
 
   metrics = dict()
 
@@ -165,7 +175,6 @@ def _parse_results(folders, results_list, message, num_samples) -> dict:
   print(metrics)
   return metrics
 
-
 def _record_time_of_operation(command, path, num_samples) -> list:
   """Runs the command on the given path for given num_samples times.
 
@@ -175,17 +184,19 @@ def _record_time_of_operation(command, path, num_samples) -> list:
     num_samples: Number of times to run the command.
 
   Returns:
-    A list containing the latencies of operations in milisecond.
+    A list containing the start and end times of operations.
   """
 
   result_list = []
+
   for _ in range(num_samples):
     start_time_sec = time.time()
     subprocess.call('{} {}'.format(command, path), shell=True,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)
     end_time_sec = time.time()
-    result_list.append((end_time_sec-start_time_sec)*1000)
+    result_list.append([start_time_sec, end_time_sec])
+
   return result_list
 
 
@@ -207,10 +218,10 @@ def _perform_testing(
     command: Command to run the test on.
 
   Returns:
-    gcs_bucket_results: A dictionary containing the list of results
-                        (all samples) for each testing folder.
-    persistent_disk_results: A dictionary containing the list of results
-                             (all samples) for each testing folder.
+    gcs_bucket_results: A dictionary containing the list of start and end
+                        times (all samples) for each testing folder.
+    persistent_disk_results: A dictionary containing the list of start and
+                             end times (all samples) for each testing folder.
   """
 
   gcs_bucket_results = {}
@@ -440,6 +451,20 @@ def _parse_arguments(argv):
       default=['ls -R'],
       required=True,
   )
+  parser.add_argument(
+      '--config_id',
+      help='Configuration id of the experiment in the BigQuery tables',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+  parser.add_argument(
+      '--start_time_build',
+      help='Time at which KOKORO triggered the build script.',
+      action='store',
+      nargs=1,
+      required=True,
+  )
   # Ignoring the first parameter, as it is the path of this python
   # script itself.
   return parser.parse_args(argv[1:])
@@ -466,13 +491,46 @@ def _check_dependencies(packages) -> None:
 
   return
 
+def _extract_vm_metrics(results_list, folders) -> list:
+
+  vm_metrics_obj = vm_metrics.VmMetrics()
+  vm_metrics_data = {}
+  # Getting VM metrics for listing tests on each folder
+  for testing_folder in folders:
+
+    # Getting start and end times for all 30 samples
+    start_time_first_sample = results_list[testing_folder.name][0][0]
+    end_time_last_sample = results_list[testing_folder.name][-1][-1]
+
+    metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
+                                                INSTANCE, PERIOD_SEC, 'list')
+
+    for row in metrics_data:
+      vm_metrics_data[testing_folder.name].append(row)
+
+  return vm_metrics_data
+
+def _export_to_gsheet(worksheet, list_data):
+
+  # Changing directory to comply with "cred.json" path in "gsheet.py".
+  os.chdir('..')
+
+  gsheet.write_to_google_sheet(worksheet, list_data)
+
+  os.chdir('./ls_metrics')  # Changing the directory back to current directory.
+  return
+
+def _export_to_bigquery():
+
+  bigquery_obj = bigquery.BigQuery()
+  bigquery_obj.setup_bigquery()
 
 if __name__ == '__main__':
   argv = sys.argv
   if len(argv) < 3:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 listing_benchmark.py [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --command COMMAND config_file')
+                    'python3 listing_benchmark.py [--keep_files] [--upload] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file')
 
   args = _parse_arguments(argv)
 
@@ -536,17 +594,41 @@ if __name__ == '__main__':
       directory_structure.folders, persistent_disk_results, args.message[0],
       int(args.num_samples[0]))
 
-  bigquery_obj = bigquery.BigQuery()
-  bigquery_obj.setup_bigquery()
+  print('Waiting for 360 seconds for metrics to be updated on VM...')
+  # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
+  # So, waiting for 360 seconds to ensure the returned metrics are not empty.
+  # Intermittently custom metrics are not available after 240 seconds, hence
+  # waiting for 360 secs instead of 240 secs
+  time.sleep(360)
+
+  gcs_results = _extract_vm_metrics(gcs_bucket_results, directory_structure.folders)
+  pd_results = _extract_vm_metrics(persistent_disk_results, directory_structure.folders)
+
+  for folder in directory_structure.folders:
+    print(f'VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
+    print("Peak CPU utilization: ", gcs_results[folder.name][2], ", Mean CPU utilization: ", gcs_results[folder.name][3])
+
+    print(f'VM metrics for listing tests (persistent disk) for folder: {folder.name}...')
+    print("Peak CPU utilization: ", pd_results[folder.name][2], ", Mean CPU utilization: ", pd_results[folder.name][3])
+
+  gcs_results_cpu = [row[2:] for row in gcs_results]
+  pd_results_cpu = [row[2:] for row in pd_results]
 
   if args.upload:
+
+    results_gcs = _get_values_to_export(directory_structure.folders, gcs_parsed_metrics, args.command[0])
+    results_pd = _get_values_to_export(directory_structure.folders, pd_parsed_metrics, args.command[0])
+
+    results_gcs = np.concatenate(gcs_bucket_results, results_gcs, gcs_results_cpu)
+    results_pd = np.concatenate(persistent_disk_results, results_pd, pd_results_cpu)
+
     log.info('Uploading files to the Google Sheet.\n')
-    _export_to_gsheet(
-        directory_structure.folders, gcs_parsed_metrics, args.command[0],
-        WORKSHEET_NAME_GCS)
-    _export_to_gsheet(
-        directory_structure.folders, pd_parsed_metrics, args.command[0],
-        WORKSHEET_NAME_PD)
+    _export_to_gsheet(WORKSHEET_NAME_GCS, results_gcs)
+    _export_to_gsheet(WORKSHEET_NAME_PD, results_pd)
+
+    log.info('Uploading files to the BigQuery.\n')
+    _export_to_bigquery('gcs bucket', args.config_id[0], args.start_time_build[0], results_gcs)
+    _export_to_bigquery('persistent disk', args.config_id[0], args.start_time_build[0], results_pd)
 
   if not args.keep_files:
     log.info('Deleting files from persistent disk.\n')

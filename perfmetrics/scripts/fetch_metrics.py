@@ -21,7 +21,7 @@ def _parse_arguments(argv):
   """Parses the arguments provided to the script via command line.
 
   Args:
-    argv: List of arguments recevied by the script.
+    argv: List of arguments received by the script.
 
   Returns:
     A class containing the parsed arguments.
@@ -33,7 +33,6 @@ def _parse_arguments(argv):
       help='Provide path of the output json file.',
       action='store'
   )
-
   parser.add_argument(
       '--upload',
       help='Upload the results to the Google Sheet.',
@@ -41,14 +40,26 @@ def _parse_arguments(argv):
       default=False,
       required=False,
   )
+  parser.add_argument(
+      '--config_id',
+      help='Configuration id of the experiment in the BigQuery tables',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+  parser.add_argument(
+      '--start_time_build',
+      help='Time at which KOKORO triggered the build script.',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+
   return parser.parse_args(argv[1:])
 
 
 if __name__ == '__main__':
   argv = sys.argv
-
-  bigquery_obj = bigquery.BigQuery()
-  bigquery_obj.setup_bigquery()
 
   fio_metrics_obj = fio_metrics.FioMetrics()
   print('Getting fio metrics...')
@@ -56,9 +67,9 @@ if __name__ == '__main__':
   args = _parse_arguments(argv)
 
   if args.upload:
-    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, FIO_WORKSHEET_NAME)
+    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, args.config_id[0], args.start_time_build[0], FIO_WORKSHEET_NAME)
   else:
-    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path)
+    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, args.config_id[0], args.start_time_build[0])
 
   print('Waiting for 360 seconds for metrics to be updated on VM...')
   # It takes up to 240 seconds for sampled data to be visible on the VM metrics graph
@@ -94,9 +105,10 @@ if __name__ == '__main__':
     rw = job[fio_metrics.consts.PARAMS][fio_metrics.consts.RW]
     print(f'Getting VM metrics for job at index {ind + 1}...')
     metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
-                                                INSTANCE, PERIOD_SEC, rw)
+                                                INSTANCE, PERIOD_SEC, rw,
+                                                args.config_id[0], args.start_time_build[0])
     for row in metrics_data:
       vm_metrics_data.append(row)
 
   if args.upload:
-    gsheet.write_to_google_sheet(VM_WORKSHEET_NAME, vm_metrics_data)
+    gsheet.write_to_google_sheet(VM_WORKSHEET_NAME, args.config_id[0], args.start_time_build[0], vm_metrics_data)

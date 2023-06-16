@@ -7,11 +7,13 @@ sudo apt-get install fuse -y
 sudo apt-get install pip -y
 echo Installing requirements..
 pip install --require-hashes -r requirements.txt --user
+CONFIG_ID=$1
+START_TIME_BUILD=$2
 echo Running script..
 # Upload data to the gsheet only when it runs through kokoro.
 if [ "${KOKORO_JOB_TYPE}" != "RELEASE" ] && [ "${KOKORO_JOB_TYPE}" != "CONTINUOUS_INTEGRATION" ] && [ "${KOKORO_JOB_TYPE}" != "PRESUBMIT_GITHUB" ];
 then
-  python3 listing_benchmark.py config.json --command "ls -R" --num_samples 30 --message "Testing CT setup."
+  python3 listing_benchmark.py config.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" --command "ls -R" --num_samples 30 --message "Testing CT setup."
 else
-  python3 listing_benchmark.py config.json --command "ls -R" --num_samples 30 --upload --message "Testing CT setup."
+  python3 listing_benchmark.py config.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" --command "ls -R" --num_samples 30 --upload --message "Testing CT setup."
 fi

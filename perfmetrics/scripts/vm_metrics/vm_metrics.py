@@ -27,8 +27,9 @@ import google.cloud
 from google.cloud import monitoring_v3
 from gsheet import gsheet
 from typing import List
+from bigquery import bigquery
 
-PROJECT_NAME = 'projects/gcs-fuse-test-ml'
+PROJECT_NAME = 'projects/gcs-fuse-test'
 CPU_UTI_METRIC_TYPE = 'compute.googleapis.com/instance/cpu/utilization'
 RECEIVED_BYTES_COUNT_METRIC_TYPE = 'compute.googleapis.com/instance/network/received_bytes_count'
 OPS_LATENCY_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_latency'
@@ -83,6 +84,10 @@ METRICS_LIST = [
     READ_BYTES_COUNT, OPS_ERROR_COUNT
 ]
 
+# List of VM metrics extracted for listing tests
+LISTING_TESTS_METRICS_LIST = [
+    CPU_UTI_PEAK, CPU_UTI_MEAN
+]
 
 class NoValuesError(Exception):
   """API response values are missing."""
@@ -235,6 +240,9 @@ class VmMetrics:
     Returns:
       list[MetricPoint]
     """
+    if test_type == 'list':
+      return LISTING_TESTS_METRICS_LIST
+
     metrics_response = self._get_api_response(start_time_sec, end_time_sec,
                                               instance, period, metric)
     metrics_data = _create_metric_points_from_response(metrics_response,
@@ -316,9 +324,8 @@ class VmMetrics:
 
     return metrics_data
 
-  def fetch_metrics_and_write_to_google_sheet(self, start_time_sec,
-                                              end_time_sec, instance, period,
-                                              test_type, worksheet_name):
+  def fetch_metrics_and_export(self, start_time_sec, end_time_sec, instance, period,
+                               test_type, config_id, start_time_build, worksheet_name):
     """Fetches the metrics data for all types and writes to a google sheet.
 
     Args:
@@ -339,6 +346,10 @@ class VmMetrics:
 
     # Writing data into google sheet
     gsheet.write_to_google_sheet(worksheet_name, metrics_data)
+    # Writing data into BigQuery
+    bigquery_obj = bigquery.BigQuery()
+    bigquery_obj.setup_bigquery()
+    bigquery_obj._export_vm_metrics_to_bigquery(config_id, start_time_build, metrics_data)
 
 def main() -> None:
   if len(sys.argv) != 7:
@@ -349,11 +360,12 @@ def main() -> None:
   period = int(sys.argv[4])
   test_type = sys.argv[5]
   worksheet_name = sys.argv[6]
-  vm_metrics = VmMetrics()
-  vm_metrics.fetch_metrics_and_write_to_google_sheet(start_time_sec,
-                                                     end_time_sec, instance,
-                                                     period, test_type,
-                                                     worksheet_name)
+
+
+  #vm_metrics = VmMetrics()
+  #vm_metrics.fetch_metrics_and_export(start_time_sec, end_time_sec, instance,
+  #                                    period, test_type, args.config_id[0],
+  #                                    args.start_time_build[0], worksheet_name)
 
 
 if __name__ == '__main__':
