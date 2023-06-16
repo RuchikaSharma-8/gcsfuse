@@ -9,7 +9,7 @@
 
 """
 
-BLOCK_SIZE_KB = 0
+BLOCK_SIZE_KB = []
 
 from dataclasses import dataclass
 import json
@@ -335,7 +335,9 @@ class FioMetrics:
 
       params.append(curr_job_params)
 
-    BLOCK_SIZE_KB = params['bs_kb']
+    for job in params:
+      BLOCK_SIZE_KB.apppend(job['bs_kb'])
+      job.pop()
     print(BLOCK_SIZE_KB)
     print("PARAMS: ", params)
     return params
