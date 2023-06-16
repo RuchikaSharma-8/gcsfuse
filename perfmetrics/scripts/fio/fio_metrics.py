@@ -313,6 +313,7 @@ class FioMetrics:
     global_params = {}
     if consts.GLOBAL_OPTS in out_json:
       for param in REQ_JOB_PARAMS:
+        print(param)
         # If param not present in global options, default value is used
         if param.json_name in out_json[consts.GLOBAL_OPTS]:
           global_params[param.name] = param.format_param(
