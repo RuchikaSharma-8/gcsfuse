@@ -313,7 +313,6 @@ class FioMetrics:
     global_params = {}
     if consts.GLOBAL_OPTS in out_json:
       for param in REQ_JOB_PARAMS:
-        print(param)
         # If param not present in global options, default value is used
         if param.json_name in out_json[consts.GLOBAL_OPTS]:
           global_params[param.name] = param.format_param(
@@ -327,7 +326,6 @@ class FioMetrics:
       curr_job_params = {}
       if consts.JOB_OPTS in job:
         for param in REQ_JOB_PARAMS:
-          print(param)
           # If the param is not present in job options, global param is used
           if param.json_name in job[consts.JOB_OPTS]:
             curr_job_params[param.name] = param.format_param(
@@ -337,7 +335,7 @@ class FioMetrics:
 
       params.append(curr_job_params)
 
-    BLOCK_SIZE_KB = params[-1]
+    BLOCK_SIZE_KB = params['bs_kb']
     print(BLOCK_SIZE_KB)
     print("PARAMS: ", params)
     return params
