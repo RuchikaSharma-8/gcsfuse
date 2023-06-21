@@ -7,6 +7,7 @@ import argparse
 from fio import fio_metrics
 from vm_metrics import vm_metrics
 from gsheet import gsheet
+from bigquery import bigquery
 
 INSTANCE = socket.gethostname()
 PERIOD_SEC = 120
@@ -32,13 +33,33 @@ def _parse_arguments(argv):
       help='Provide path of the output json file.',
       action='store'
   )
-
   parser.add_argument(
       '--upload',
       help='Upload the results to the Google Sheet.',
       action='store_true',
       default=False,
       required=False,
+  )
+  parser.add_argument(
+      '--upload_bigquery',
+      help='Upload the results to the BigQuery.',
+      action='store_true',
+      default=False,
+      required=False,
+  )
+  parser.add_argument(
+      '--config_id',
+      help='Configuration ID of the experiment',
+      action='store',
+      nargs=1,
+      required=True,
+  )
+  parser.add_argument(
+      '--start_time_build',
+      help='Start time of the build.',
+      action='store',
+      nargs=1,
+      required=True,
   )
   return parser.parse_args(argv[1:])
 
@@ -49,10 +70,16 @@ if __name__ == '__main__':
   fio_metrics_obj = fio_metrics.FioMetrics()
   print('Getting fio metrics...')
 
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ()
+  bigquery_obj.setup_bigquery()
   args = _parse_arguments(argv)
 
+  if args.upload and args.upload_bq:
+    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, FIO_WORKSHEET_NAME, 'fio')
   if args.upload:
     temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, FIO_WORKSHEET_NAME)
+  if args.upload_bq:
+    temp = fio_metrics_obj.get_metrics(args.fio_json_output_path, None, 'fio')
   else:
     temp = fio_metrics_obj.get_metrics(args.fio_json_output_path)
 
@@ -77,7 +104,7 @@ if __name__ == '__main__':
     print("End time: ", end_time_sec)
 
   vm_metrics_obj = vm_metrics.VmMetrics()
-  vm_metrics_data = []
+  temp_metrics_data = []
   # Getting VM metrics for every job
   for ind, job in enumerate(temp):
     start_time_sec = job[fio_metrics.consts.START_TIME]
@@ -92,7 +119,11 @@ if __name__ == '__main__':
     metrics_data = vm_metrics_obj.fetch_metrics(start_time_sec, end_time_sec,
                                                 INSTANCE, PERIOD_SEC, rw)
     for row in metrics_data:
-      vm_metrics_data.append(row)
+      temp_metrics_data.append(row)
 
+  vm_metrics_data = [row[1:] + [None, None, None, None, None, None, None, None] for row in temp_metrics_data]
   if args.upload:
     gsheet.write_to_google_sheet(VM_WORKSHEET_NAME, vm_metrics_data)
+  if args.upload_bq:
+    bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
+    bigquery_obj.upload_metrics_to_table('vm', args.config_id[0], args.start_time_build[0], vm_metrics_data)

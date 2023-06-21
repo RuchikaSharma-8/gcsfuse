@@ -25,16 +25,16 @@ import time
 from google.cloud import bigquery
 from google.cloud.bigquery.job import QueryJob
 
-class ExperimentsGCSFuse:
+class ExperimentsGCSFuseBQ:
   """
-    This class can used to create the dataset that will store the tables and the tables
-    to store the experiment configurations and the tables which will store the metrics data.
-    It also provides methods to upload data to the tables.
+    Class to create and interact with Bigquery dataset and tables for storing
+    experiments configurations and their results.
 
     Attributes:
-      project_id (str): The project on pantheon in which dataset and tables will be created
+      project_id (str): The GCP project in which dataset and tables will be created
       dataset_id (str): The name of the dataset in the project that will store the tables
-      bq_client (Optional[google.cloud.bigquery.client.Client]): The client for interacting with Bigquery
+      bq_client (Optional[google.cloud.bigquery.client.Client]): The client for interacting with Bigquery.
+                                                                 Default value is bigquery.Client(project=project_id).
   """
 
   CONFIGURATION_TABLE_ID = 'experiment_configuration'
@@ -43,14 +43,6 @@ class ExperimentsGCSFuse:
   LS_TABLE_ID = 'list_metrics'
 
   def __init__(self, project_id, dataset_id, bq_client=None):
-    """
-      Initializes a new instance of ExperimentsGCSFuse.
-
-      Args:
-        project_id (str): The project on pantheon in which dataset and tables will be created
-        dataset_id (str): The name of the dataset in the project that will store the tables
-        bq_client (Optional[google.cloud.bigquery.client.Client]): The client for interacting with Bigquery
-    """
     if bq_client is None:
       self.client = bigquery.Client(project=project_id)
     self.project_id = project_id
@@ -67,23 +59,22 @@ class ExperimentsGCSFuse:
     return self.client.get_dataset(self.dataset_id)
 
   def _execute_query_and_check_for_error(self, query) -> QueryJob:
-    """Executes the query in BigQuery.
+    """Executes the query in BigQuery and raises an exception if query
+       execution could not be completed.
 
     Args:
       query (str): Query that will be executed in BigQuery.
 
     Raises:
-      Aborts the program if error is encountered while executing th query.
+      Exception: If query execution failed.
     """
     job = self.client.query(query)
     # Wait for query to be completed
     job.result()
     if job.errors:
       for error in job.errors:
-        print(f"Error message: {error['message']}")
-      sys.exit(1)
+        raise Exception(f"Error message: {error['message']}")
     return job
-
 
   def _check_if_config_valid(self, exp_config_id) -> bool:
     """Checks if exp_config_id exists in the experiment_configuration table.
@@ -98,7 +89,7 @@ class ExperimentsGCSFuse:
       SELECT *
       FROM `{}.{}.{}`
       WHERE configuration_id = '{}'
-    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID, exp_config_id)
+    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID, exp_config_id)
 
     job = self._execute_query_and_check_for_error(query_check_if_config_valid)
     row_count = job.result().total_rows
@@ -107,10 +98,11 @@ class ExperimentsGCSFuse:
     return False
 
   def setup_dataset_and_tables(self):
-
-    """Creates the dataset to store the tables and the experiment configuration table to store the configuration details and
-       creates the list_metrics, read_write_fio_metrics and read_write_vm_metrics tables
-       to store the metrics data if they don't already exist in the dataset
+    """
+      Creates the dataset to store the tables and the experiment configuration table
+      to store the configuration details and creates the list_metrics, read_write_fio_metrics
+      and read_write_vm_metrics tables to store the metrics data if it doesn't already exist
+      in the dataset.
     """
     # Create dataset if not exists
     dataset = bigquery.Dataset(f"{self.project_id}.{self.dataset_id}")
@@ -128,13 +120,13 @@ class ExperimentsGCSFuse:
         end_date TIMESTAMP,
         PRIMARY KEY (configuration_id) NOT ENFORCED
       ) OPTIONS (description = 'Table for storing Job Configurations and respective VM instance name on which the job was run');
-    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID)
+    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
 
     # Query for creating fio_metrics table
     query_create_table_fio_metrics = """
       CREATE TABLE IF NOT EXISTS {}.{}.{}(
         configuration_id STRING, 
-        start_time_build TIMESTAMP,
+        start_time_build INT64,
         test_type STRING, 
         num_threads INT64, 
         file_size_kb INT64, 
@@ -153,13 +145,13 @@ class ExperimentsGCSFuse:
         percentile_latency_95 FLOAT64, 
         FOREIGN KEY(configuration_id) REFERENCES {}.{} (configuration_id) NOT ENFORCED
       ) OPTIONS (description = 'Table for storing FIO metrics extracted from experiments.');
-    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.FIO_TABLE_ID, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID)
+    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.FIO_TABLE_ID, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
 
     # Query for creating vm_metrics table
     query_create_table_vm_metrics = """
       CREATE TABLE IF NOT EXISTS {}.{}.{}(
         configuration_id STRING, 
-        start_time_build TIMESTAMP,
+        start_time_build INT64,
         end_time INT64, 
         cpu_utilization_peak_percentage FLOAT64, 
         cpu_utilization_mean_percentage FLOAT64, 
@@ -178,13 +170,13 @@ class ExperimentsGCSFuse:
         ops_count_new_reader INT64, 
         FOREIGN KEY(configuration_id) REFERENCES {}.{} (configuration_id) NOT ENFORCED
       ) OPTIONS (description = 'Table for storing VM metrics extracted from experiments.');
-    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.VM_TABLE_ID, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID)
+    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.VM_TABLE_ID, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
 
     # Query for creating ls_metrics table
     query_create_table_ls_metrics = """
       CREATE TABLE IF NOT EXISTS {}.{}.{}(
         configuration_id STRING,
-        start_time_build TIMESTAMP,
+        start_time_build INT64,
         mount_type STRING, 
         command STRING,
         start_time FLOAT64, 
@@ -206,7 +198,7 @@ class ExperimentsGCSFuse:
         received_bytes_mean_per_sec FLOAT64,
         FOREIGN KEY(configuration_id) REFERENCES {}.{} (configuration_id) NOT ENFORCED
       ) OPTIONS (description = 'Table for storing GCSFUSE metrics extracted from list experiments.');
-    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.LS_TABLE_ID, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID)
+    """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.LS_TABLE_ID, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
 
     self._execute_query_and_check_for_error(query_create_table_experiment_configuration)
     self._execute_query_and_check_for_error(query_create_table_fio_metrics)
@@ -236,7 +228,7 @@ class ExperimentsGCSFuse:
       WHERE gcsfuse_flags = '{}'
       AND branch = '{}'
       AND configuration_name = '{}'
-#     """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID, gcsfuse_flags, branch, config_name)
+#     """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID, gcsfuse_flags, branch, config_name)
 
     job = self._execute_query_and_check_for_error(query_check_config_exists)
     result_count = job.result().total_rows
@@ -244,7 +236,7 @@ class ExperimentsGCSFuse:
     # If result empty, then experiment configuration not present -> insert new experiment configuration -> return configuration ID
     if result_count == 0:
       ds_ref = self.dataset_ref
-      table_ref = ds_ref.table(ExperimentsGCSFuse.CONFIGURATION_TABLE_ID)
+      table_ref = ds_ref.table(ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
       table = self.client.get_table(table_ref)
       uuid_str = str(uuid.uuid4())
       rows_to_insert = [(uuid_str, config_name, gcsfuse_flags, branch, end_date)]
@@ -268,7 +260,7 @@ class ExperimentsGCSFuse:
         UPDATE `{}.{}.{}`
         SET end_date = '{}'
         WHERE configuration_id = '{}'
-        """.format(self.project_id, self.dataset_id, ExperimentsGCSFuse.CONFIGURATION_TABLE_ID, end_date, config_id)
+        """.format(self.project_id, self.dataset_id, ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID, end_date, config_id)
       self._execute_query_and_check_for_error(query_update_end_date)
       return config_id
 
@@ -295,11 +287,11 @@ class ExperimentsGCSFuse:
       table_id = None
       # Get the table ID based on the table name
       if table_name == 'fio':
-        table_id = ExperimentsGCSFuse.FIO_TABLE_ID
+        table_id = ExperimentsGCSFuseBQ.FIO_TABLE_ID
       elif table_name == 'vm':
-        table_id = ExperimentsGCSFuse.VM_TABLE_ID
+        table_id = ExperimentsGCSFuseBQ.VM_TABLE_ID
       elif table_name == 'list':
-        table_id = ExperimentsGCSFuse.LS_TABLE_ID
+        table_id = ExperimentsGCSFuseBQ.LS_TABLE_ID
       else:
         print("Wrong table name passed to bigquery module: ", table_name)
         sys.exit(1)

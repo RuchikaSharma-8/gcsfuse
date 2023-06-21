@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Tuple, Callable
 
 from fio import constants as consts
 from gsheet import gsheet
+from bigquery import bigquery
 
 
 @dataclass(frozen=True)
@@ -72,7 +73,11 @@ REQ_JOB_PARAMS.append(JobParam(consts.THREADS, consts.NUMJOBS,
 REQ_JOB_PARAMS.append(
     JobParam(
         consts.FILESIZE_KB, consts.FILESIZE,
-        lambda val: _convert_value(val, consts.FILESIZE_TO_KB_CONVERSION), 0))
+        lambda val: _convert_value(val, consts.SIZE_TO_KB_CONVERSION), 0))
+REQ_JOB_PARAMS.append(
+    JobParam(
+        consts.BLOCKSIZE_KB, consts.BLOCKSIZE,
+        lambda val: _convert_value(val, consts.SIZE_TO_KB_CONVERSION), 0))
 # append new params here
 
 REQ_JOB_METRICS = []
@@ -290,7 +295,14 @@ class FioMetrics:
               name= FILESIZE_KB,
               json_name= FILESIZE,
               format_param=lambda val: _convert_value(val,
-              consts.FILESIZE_TO_KB_CONVERSION),
+              consts.SIZE_TO_KB_CONVERSION),
+              default = 0
+          )
+          JobParam(
+              name= BLOCKSIZE_KB,
+              json_name= BS,
+              format_param=lambda val: _convert_value(val,
+              consts.SIZE_TO_KB_CONVERSION),
               default = 0
           )
       ]
@@ -412,12 +424,11 @@ class FioMetrics:
 
     return all_jobs
 
-  def _add_to_gsheet(self, jobs, worksheet_name):
-    """Add the metric values to respective columns in a google sheet.
+  def _get_values_to_export(self, jobs):
+    """Get the metrics values in a list to export to Google Spreadsheet and BigQuery.
 
     Args:
       jobs: list of dicts, contains required metrics for each job
-      worksheet_name: str, worksheet where job metrics should be written.
     """
 
     values = []
@@ -432,11 +443,7 @@ class FioMetrics:
         row.append(metric_val)
       values.append(row)
 
-    gsheet.write_to_google_sheet(worksheet_name, values)
-
-  def get_metrics(self,
-                  filepath,
-                  worksheet_name=None) -> List[Dict[str, Any]]:
+  def get_metrics(self, filepath, config_id, start_time_build, worksheet_name=None, table_name_bq='') -> List[Dict[str, Any]]:
     """Returns job metrics obtained from given filepath and writes to gsheets.
 
     Args:
@@ -451,19 +458,23 @@ class FioMetrics:
     """
     fio_out = self._load_file_dict(filepath)
     job_metrics = self._extract_metrics(fio_out)
+    values = self._get_values_to_export(job_metrics)
     if worksheet_name:
-      self._add_to_gsheet(job_metrics, worksheet_name)
+      gsheet.write_to_google_sheet(worksheet_name, values)
+    if table_name_bq:
+      bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
+      bigquery_obj.upload_metrics_to_table(table_name_bq, config_id, start_time_build, values)
 
     return job_metrics
 
 if __name__ == '__main__':
   argv = sys.argv
-  if len(argv) != 2:
+  if len(argv) != 5:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 -m fio.fio_metrics <fio output json filepath>')
+                    'python3 -m fio.fio_metrics <fio output json filepath> config_id start_time_build')
 
   fio_metrics_obj = FioMetrics()
-  temp = fio_metrics_obj.get_metrics(argv[1], 'fio_metrics_expt')
+  temp = fio_metrics_obj.get_metrics(argv[1], argv[2], argv[3], 'fio_metrics_expt', 'fio')
   print(temp)
 

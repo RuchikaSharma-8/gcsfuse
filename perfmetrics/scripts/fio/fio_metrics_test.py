@@ -408,6 +408,7 @@ class TestFioMetricsTest(unittest.TestCase):
         'params': {
             'rw': 'read',
             'filesize_kb': 50000,
+            'bs': 1000,
             'num_threads': 40
         },
         'start_time': 1653027084,
@@ -443,6 +444,7 @@ class TestFioMetricsTest(unittest.TestCase):
         'params': {
             'rw': 'read',
             'filesize_kb': 50000,
+            'bs': 1000,
             'num_threads': 40
         },
         'start_time': 1653027084,
@@ -498,6 +500,7 @@ class TestFioMetricsTest(unittest.TestCase):
         'params': {
             'rw': 'read',
             'filesize_kb': 50000,
+            'bs': 1000,
             'num_threads': 40
         },
         'start_time': 1653027084,
@@ -556,7 +559,7 @@ class TestFioMetricsTest(unittest.TestCase):
             body={
                 'majorDimension':
                     'ROWS',
-                'values': [['read', 40, 50000, 1653027084,
+                'values': [['read', 40, 50000, 1000, 1653027084,
                             1653027155, 95.26093, 99888324, 6040846336,
                             0.35337776000000004, 1.6975198690000002,
                             0.41775487677469203, 0.37958451200000004,
@@ -580,6 +583,7 @@ class TestFioMetricsTest(unittest.TestCase):
         'params': {
             'rw': 'read',
             'filesize_kb': 50000,
+            'bs': 1000,
             'num_threads': 10
         },
         'start_time': 1653381667,
@@ -659,7 +663,7 @@ class TestFioMetricsTest(unittest.TestCase):
                 'majorDimension':
                     'ROWS',
                 'values': [
-                    ['read', 10, 50000, 1653381667, 1653381738,
+                    ['read', 10, 50000, 1000, 1653381667, 1653381738,
                      115.354741, 138911322, 8405385216, 0.24973726400000001,
                      28.958587178000002, 18.494668007316744,
                      0.37958451200000004, 0.38797312, 0.49283072000000006,
@@ -688,7 +692,8 @@ class TestFioMetricsTest(unittest.TestCase):
         'params': {
             'rw': 'read',
             'num_threads': 40,
-            'filesize_kb': 3000
+            'filesize_kb': 3000,
+            'bs': 1000
         },
         'start_time': 1653596980,
         'end_time': 1653597056,
@@ -708,6 +713,7 @@ class TestFioMetricsTest(unittest.TestCase):
         'params': {
             'rw': 'write',
             'filesize_kb': 5000,
+            'bs': 1000,
             'num_threads': 10
         },
         'start_time': 1653597076,
@@ -767,11 +773,11 @@ class TestFioMetricsTest(unittest.TestCase):
                 'majorDimension':
                     'ROWS',
                 'values': [
-                    ['read', 40, 3000, 1653596980, 1653597056,
+                    ['read', 40, 3000, 1000, 1653596980, 1653597056,
                      88.851558, 106170722, 6952058880, 0.17337301400000002,
                      36.442812445, 21.799839057909956, 0.37958451200000004,
                      0.38797312, 0.49283072000000006, 0.526385152],
-                    ['write', 10, 5000, 1653597076, 1653597156,
+                    ['write', 10, 5000, 1000, 1653597076, 1653597156,
                      34.641075, 41972238, 2532311040, 0.21200723800000001,
                      21.590713209, 15.969313013822775, 0.37958451200000004,
                      0.38797312, 0.49283072000000006, 0.526385152]
