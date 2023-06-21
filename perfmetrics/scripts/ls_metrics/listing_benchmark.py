@@ -511,7 +511,7 @@ def _export_to_gsheet(worksheet, list_data):
 
 def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
 
-  bigquery_obj = bigquery.ExperimentsGCSFuseBQ()
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
   ls_data_all = [[test_type] + row for row in ls_data]
   bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_all)
   return

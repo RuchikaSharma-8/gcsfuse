@@ -54,11 +54,12 @@ gcsfuse $GCSFUSE_FLAGS $BUCKET_NAME $MOUNT_POINT
 BRANCH="master"
 END_DATE="2023-12-25 05:30:00"
 START_TIME_BUILD=$(date +%s)
+CONFIG_NAME="MockSelectionInput"
 
 cd "./bigquery"
 echo Installing requirements..
 pip install --require-hashes -r requirements.txt --user
-CONFIG_ID=$(eval "python3 bigquery.py --gcsfuse_flags '$GCSFUSE_FLAGS' --branch '$BRANCH' --end_date '$END_DATE'")
+CONFIG_ID=$(eval "python3 bigquery_get_config.py --gcsfuse_flags '$GCSFUSE_FLAGS' --branch '$BRANCH' --end_date '$END_DATE' --config_name '$CONFIG_NAME'")
 
 # Executing perf tests
 cd ".."

@@ -70,8 +70,8 @@ if __name__ == '__main__':
   fio_metrics_obj = fio_metrics.FioMetrics()
   print('Getting fio metrics...')
 
-  bigquery_obj = bigquery.ExperimentsGCSFuseBQ()
-  bigquery_obj.setup_bigquery()
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
+  bigquery_obj.setup_dataset_and_tables()
   args = _parse_arguments(argv)
 
   if args.upload and args.upload_bq:

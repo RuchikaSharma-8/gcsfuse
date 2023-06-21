@@ -15,7 +15,6 @@
 
 This python script calls the bigquery module to create the dataset that will store the tables,
 the table to store the experiment configurations and the tables to store the metrics data.
-
 Note: BigQuery API should be enabled for the project
 """
 import bigquery
@@ -25,4 +24,4 @@ DATASET_ID = 'performance_metrics'
 
 if __name__ == '__main__':
   bigquery_obj = bigquery.BigQuery(PROJECT_ID, DATASET_ID)
-  bigquery_obj.setup_bigquery()
+  bigquery_obj.setup_dataset_and_tables()
