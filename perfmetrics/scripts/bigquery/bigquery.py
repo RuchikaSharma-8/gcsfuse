@@ -21,6 +21,7 @@ Note:
 """
 import sys
 import uuid
+import time
 from google.cloud import bigquery
 from google.cloud.bigquery.job import QueryJob
 
@@ -75,7 +76,8 @@ class ExperimentsGCSFuse:
       Aborts the program if error is encountered while executing th query.
     """
     job = self.client.query(query)
-
+    # Wait for query to be completed
+    job.result()
     if job.errors:
       for error in job.errors:
         print(f"Error message: {error['message']}")
@@ -113,6 +115,8 @@ class ExperimentsGCSFuse:
     # Create dataset if not exists
     dataset = bigquery.Dataset(f"{self.project_id}.{self.dataset_id}")
     self.client.create_dataset(dataset, exists_ok=True)
+    # Wait for the dataset to be created and ready to be referenced
+    time.sleep(120)
 
     # Query for creating experiment_configuration table if it does not exist
     query_create_table_experiment_configuration = """
