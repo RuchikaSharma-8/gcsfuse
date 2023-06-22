@@ -602,25 +602,12 @@ if __name__ == '__main__':
     print(f'VM metrics for listing tests (persistent disk) for folder: {folder.name}...')
     print("Peak CPU utilization: ", pd_results[folder.name][2], ", Mean CPU utilization: ", pd_results[folder.name][3])
 
-
   gcs_results_cpu = {}
   pd_results_cpu = {}
+
   for folder in directory_structure.folders:
     gcs_results_cpu[folder.name] = gcs_results[folder.name][2:]
     pd_results_cpu[folder.name] = pd_results[folder.name][2:]
-
-  gcs_results = _extract_vm_metrics(gcs_bucket_results, directory_structure.folders)
-  pd_results = _extract_vm_metrics(persistent_disk_results, directory_structure.folders)
-
-  for folder in directory_structure.folders:
-    print(f'VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
-    print("Peak CPU utilization: ", gcs_results[folder.name][2], ", Mean CPU utilization: ", gcs_results[folder.name][3])
-
-    print(f'VM metrics for listing tests (persistent disk) for folder: {folder.name}...')
-    print("Peak CPU utilization: ", pd_results[folder.name][2], ", Mean CPU utilization: ", pd_results[folder.name][3])
-
-  gcs_results_cpu = {}
-  pd_results_cpu = {}
 
   temp_results_gcs = _get_values_to_export(directory_structure.folders, gcs_parsed_metrics, args.command[0])
   temp_results_pd = _get_values_to_export(directory_structure.folders, pd_parsed_metrics, args.command[0])
@@ -629,18 +616,13 @@ if __name__ == '__main__':
   results_pd = []
 
   for folder, value in zip(directory_structure.folders, temp_results_gcs):
-    print("folder: ",folder.name)
-    print("value: ",value)
-    print("hello1: ",gcs_bucket_results[folder.name])
-    print("value: ",value)
-    print("hello2: ",gcs_results_cpu[folder.name])
-    print([gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]])
     temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + value + gcs_results_cpu[folder.name]
     results_gcs.append(temp)
 
   for folder, value in zip(directory_structure.folders, temp_results_pd):
     temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + value + pd_results_cpu[folder.name]
     results_pd.append(temp)
+
   for folder in directory_structure.folders:
     gcs_results_cpu[folder.name] = gcs_results[folder.name][2:]
     pd_results_cpu[folder.name] = pd_results[folder.name][2:]

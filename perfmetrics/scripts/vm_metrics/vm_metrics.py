@@ -86,7 +86,7 @@ METRICS_LIST = [
 
 # List of VM metrics extracted for listing tests
 LISTING_TESTS_METRICS_LIST = [
-    CPU_UTI_PEAK, CPU_UTI_MEAN
+    CPU_UTI_PEAK, CPU_UTI_MEAN, REC_BYTES_PEAK, REC_BYTES_MEAN
 ]
 
 class NoValuesError(Exception):
