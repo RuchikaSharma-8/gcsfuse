@@ -657,10 +657,6 @@ if __name__ == '__main__':
     temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values + pd_results_cpu[folder.name]
     results_pd.append(temp)
 
-  for folder in directory_structure.folders:
-    gcs_results_cpu[folder.name] = gcs_results[folder.name][2:]
-    pd_results_cpu[folder.name] = pd_results[folder.name][2:]
-
   if args.upload_gs:
     log.info('Uploading files to the Google Sheet.\n')
     _export_to_gsheet(WORKSHEET_NAME_GCS, results_gcs)
