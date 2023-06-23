@@ -634,12 +634,12 @@ if __name__ == '__main__':
     print(f'VM metrics for listing tests (persistent disk) for folder: {folder.name}...')
     print(pd_results[folder.name])
 
-  gcs_results_cpu = {}
-  pd_results_cpu = {}
+  gcs_results_vm = {}
+  pd_results_vm = {}
 
   for folder in directory_structure.folders:
-    gcs_results_cpu[folder.name] = gcs_results[folder.name][2:]
-    pd_results_cpu[folder.name] = pd_results[folder.name][2:]
+    gcs_results_vm[folder.name] = gcs_results[folder.name][2:]
+    pd_results_vm[folder.name] = pd_results[folder.name][2:]
 
   temp_results_gcs = _get_values_to_export(directory_structure.folders, gcs_parsed_metrics, args.command[0])
   temp_results_pd = _get_values_to_export(directory_structure.folders, pd_parsed_metrics, args.command[0])
@@ -649,12 +649,12 @@ if __name__ == '__main__':
 
   for folder, values in zip(directory_structure.folders, temp_results_gcs):
     upload_values = [values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]]
-    temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + upload_values + gcs_results_cpu[folder.name]
+    temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + upload_values + gcs_results_vm[folder.name]
     results_gcs.append(temp)
 
   for folder, values in zip(directory_structure.folders, temp_results_pd):
     upload_values = [values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]]
-    temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values + pd_results_cpu[folder.name]
+    temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values + pd_results_vm[folder.name]
     results_pd.append(temp)
 
   if args.upload_gs:
