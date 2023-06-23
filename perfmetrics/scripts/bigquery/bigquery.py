@@ -41,6 +41,9 @@ class ExperimentsGCSFuseBQ:
   FIO_TABLE_ID = 'read_write_fio_metrics'
   VM_TABLE_ID = 'read_write_vm_metrics'
   LS_TABLE_ID = 'list_metrics'
+  table_dict = {'fio': FIO_TABLE_ID,
+                'vm': VM_TABLE_ID,
+                'list': LS_TABLE_ID}
 
   def __init__(self, project_id, dataset_id, bq_client=None):
     if bq_client is None:
@@ -69,12 +72,23 @@ class ExperimentsGCSFuseBQ:
       Exception: If query execution failed.
     """
     job = self.client.query(query)
-    # Wait for query to be completed
-    job.result()
     if job.errors:
       for error in job.errors:
         raise Exception(f"Error message: {error['message']}")
     return job
+
+  def _validate_result(self, result):
+    """Check if any result of query insertion contains any errors and raises an
+      exception if insertion could not be completed.
+
+    Args:
+      result (Union[None, List[Dict[str, Any]]]): Result of inserting rows.
+
+    Raises:
+      Exception: If row insertion failed.
+    """
+    if result:
+      raise Exception(f'Error inserting data to BigQuery tables: {result}')
 
   def _check_if_config_valid(self, exp_config_id) -> bool:
     """Checks if exp_config_id exists in the experiment_configuration table.
@@ -216,6 +230,7 @@ class ExperimentsGCSFuseBQ:
       gcsfuse_flags (str): Set of flags the gcsfuse flags used for experiment.
       branch (str): GCSFuse repo branch used for building GCSFuse.
       end_date (timestamp): Date till when experiments of this configuration are run.
+                            Format: 'YYYY-MM-DD HH:MM:SS'
       config_name (str): Name of the experiment configuration.
 
     Returns:
@@ -233,29 +248,23 @@ class ExperimentsGCSFuseBQ:
     job = self._execute_query_and_check_for_error(query_check_config_exists)
     result_count = job.result().total_rows
 
+    # If more than 1 result -> duplicate experiment configuration present -> throw error
+    if result_count > 1:
+      raise Exception("Duplicate experiment configurations exist. Data corrupted")
+
     # If result empty, then experiment configuration not present -> insert new experiment configuration -> return configuration ID
-    if result_count == 0:
-      ds_ref = self.dataset_ref
-      table_ref = ds_ref.table(ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
+    elif result_count == 0:
+      table_ref = self.dataset_ref.table(ExperimentsGCSFuseBQ.CONFIGURATION_TABLE_ID)
       table = self.client.get_table(table_ref)
       uuid_str = str(uuid.uuid4())
       rows_to_insert = [(uuid_str, config_name, gcsfuse_flags, branch, end_date)]
       result = self.client.insert_rows(table, rows_to_insert)
-      if result:
-        print(f'Error inserting experiment configuration: {result}')
-        sys.exit(1)
+      self._validate_result(result)
       return uuid_str
-
-    # If more than 1 result -> duplicate experiment configuration present -> throw error
-    elif result_count > 1:
-      print("Duplicate experiment configurations exist. Data corrupted")
-      sys.exit(1)
 
     # If exactly one result -> update end date -> return configuration ID
     else:
-      config_id = None
-      for row in job:
-        config_id = row['configuration_id']
+      config_id = job[0]['configuration_id']
       query_update_end_date = """
         UPDATE `{}.{}.{}`
         SET end_date = '{}'
@@ -270,6 +279,10 @@ class ExperimentsGCSFuseBQ:
 
     Args:
       table_name (str): Table name corresponding to the table id to which results are being uploaded
+                        It can have the following values:
+                        'fio': For uploading to read_write_fio_metrics table
+                        'vm': For uploading to read_write_vm_metrics table
+                        'list': For uploading to list_metrics table
       config_id (str): config_id of the experiment for which results are being uploaded
       start_time_build (timestamp): Start time of the build
       metrics_data (list): A 2D list containing the experiment results
@@ -279,31 +292,18 @@ class ExperimentsGCSFuseBQ:
     config_valid = self._check_if_config_valid(config_id)
 
     if not config_valid:
-      print("Invalid configuration ID")
-      sys.exit(1)
-    else:
-      # Get the dataset reference
-      ds_ref = self.dataset_ref
-      table_id = None
-      # Get the table ID based on the table name
-      if table_name == 'fio':
-        table_id = ExperimentsGCSFuseBQ.FIO_TABLE_ID
-      elif table_name == 'vm':
-        table_id = ExperimentsGCSFuseBQ.VM_TABLE_ID
-      elif table_name == 'list':
-        table_id = ExperimentsGCSFuseBQ.LS_TABLE_ID
-      else:
-        print("Wrong table name passed to bigquery module: ", table_name)
-        sys.exit(1)
-      # Get the table reference from the ID
-      table_ref = ds_ref.table(table_id)
-      table = self.client.get_table(table_ref)
+      raise Exception("Invalid configuration ID")
 
-      for row in metrics_data:
-        row_to_insert = [
-            (config_id, start_time_build) + tuple(row)
-        ]
-        result = self.client.insert_rows(table, row_to_insert)
-        if result:
-          print(f'Error inserting data: {result}')
-          sys.exit(1)
+    if table_name not in ExperimentsGCSFuseBQ.table_dict:
+      raise ValueError("Invalid table name passed to bigquery module")
+
+    table_id = ExperimentsGCSFuseBQ.table_dict[table_name]
+    table_ref = self.dataset_ref.table(table_id)
+    table = self.client.get_table(table_ref)
+
+    for row in metrics_data:
+      row_to_insert = [
+          (config_id, start_time_build) + tuple(row)
+      ]
+      result = self.client.insert_rows(table, row_to_insert)
+      self._validate_result(result)

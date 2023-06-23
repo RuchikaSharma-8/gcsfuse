@@ -2,19 +2,19 @@
 
 This python script benchmarks and compares the latency of listing operation in
 persistent disk vs GCS bucket. It creates the necessary directory structure,
-containing files and folders, needed to test the listing operation. Furthermore
-it can optionally upload the results of the test to a Google Sheet. It takes
+containing files and folders, needed to test the listing operation. Furthermore,
+it can optionally upload the results of the test to a Google Sheet or Bigquery. It takes
 input a JSON config file whcih contains the info regrading directory structure
 and also through which multiple tests of different configurations can be
 performed in a single run.
 
 Typical usage example:
-  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file
+  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file
 
   Flag -h: Typical help interface of the script.
   Flag --keep_files: Do not delete the generated directory structure from the
                      persistent disk after running the tests.
-  Flag --upload: Uploads the results of the test to the Google Sheet.
+  Flag --upload_gs: Uploads the results of the test to the Google Sheet.
   Flag --upload_bq: Uploads the results of the test to the BigQuery.
   Flag --num_samples: Runs each test for NUM_SAMPLES times.
   Flag --message: Takes input a message string, which describes/titles the test.
@@ -46,6 +46,7 @@ import numpy as np
 import fetch_metrics
 from bigquery import bigquery
 from vm_metrics import vm_metrics
+from bigquery import constants
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,7 +57,6 @@ log = logging.getLogger()
 
 WORKSHEET_NAME_GCS = 'ls_metrics_gcsfuse'
 WORKSHEET_NAME_PD = 'ls_metrics_persistent_disk'
-
 
 def _count_number_of_files_and_folders(directory, files, folders):
   """Count the number of files and folders in the given directory recursively.
@@ -84,6 +84,9 @@ def _get_values_to_export(folders, metrics, command) -> list:
     metrics: A dictionary containing all the result metrics for each
              testing folder.
     command: Command to run the tests on.
+
+  Returns:
+    list: List of results to upload to GSheet or BigQuery
   """
 
   list_metrics_data = []
@@ -91,18 +94,24 @@ def _get_values_to_export(folders, metrics, command) -> list:
     num_files, num_folders = _count_number_of_files_and_folders(
         testing_folder, 0, 0)
     row = [
+        metrics[testing_folder.name]['Test Desc.'],
         command,
         num_files,
+        num_folders,
         metrics[testing_folder.name]['Number of samples'],
-        metrics[testing_folder.name]['Quantiles']['0 %ile'],
-        metrics[testing_folder.name]['Quantiles']['100 %ile'],
         metrics[testing_folder.name]['Mean'],
         metrics[testing_folder.name]['Median'],
         metrics[testing_folder.name]['Standard Dev'],
+        metrics[testing_folder.name]['Quantiles']['0 %ile'],
         metrics[testing_folder.name]['Quantiles']['20 %ile'],
         metrics[testing_folder.name]['Quantiles']['50 %ile'],
         metrics[testing_folder.name]['Quantiles']['90 %ile'],
-        metrics[testing_folder.name]['Quantiles']['95 %ile']
+        metrics[testing_folder.name]['Quantiles']['95 %ile'],
+        metrics[testing_folder.name]['Quantiles']['98 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99.5 %ile'],
+        metrics[testing_folder.name]['Quantiles']['99.9 %ile'],
+        metrics[testing_folder.name]['Quantiles']['100 %ile']
     ]
     list_metrics_data.append(row)
 
@@ -140,6 +149,7 @@ def _parse_results(folders, result_list, message, num_samples) -> dict:
 
   for testing_folder in folders:
     metrics[testing_folder.name] = dict()
+    metrics[testing_folder.name]['Test Desc.'] = message
     metrics[testing_folder.name]['Number of samples'] = num_samples
 
     # Sorting based on time.
@@ -153,12 +163,14 @@ def _parse_results(folders, result_list, message, num_samples) -> dict:
         stat.stdev(results_list[testing_folder.name]), 3)
 
     metrics[testing_folder.name]['Quantiles'] = dict()
-    sample_set = [0, 20, 50, 90, 95, 100]
+    sample_set = [0, 20, 50, 90, 95, 98, 99, 99.5, 99.9, 100]
     for percentile in sample_set:
       metrics[testing_folder.name]['Quantiles']['{} %ile'.format(percentile)] = round(
           np.percentile(results_list[testing_folder.name], percentile), 3)
 
+  print(metrics)
   return metrics
+
 
 def _record_time_of_operation(command, path, num_samples) -> list:
   """Runs the command on the given path for given num_samples times.
@@ -404,7 +416,7 @@ def _parse_arguments(argv):
       required=False,
   )
   parser.add_argument(
-      '--upload',
+      '--upload_gs',
       help='Upload the results to the Google Sheet.',
       action='store_true',
       default=False,
@@ -481,7 +493,15 @@ def _check_dependencies(packages) -> None:
   return
 
 def _extract_vm_metrics(results_list, folders) -> list:
+  """Extracts VM metrics for each testing folder.
 
+  Args:
+    results_list (list): List containing the start and end times
+                        (for all samples) for each testing folder.
+    folders (list): List containing protobufs of testing folders.
+  Returns:
+    list: A list of extracted metrics
+  """
   vm_metrics_obj = vm_metrics.VmMetrics()
   vm_metrics_data = {}
   # Getting VM metrics for listing tests on each folder
@@ -499,18 +519,30 @@ def _extract_vm_metrics(results_list, folders) -> list:
 
   return vm_metrics_data
 
-def _export_to_gsheet(worksheet, list_data):
+def _export_to_gsheet(worksheet, ls_data):
+  """Writes list results to Google Spreadsheets
 
+  Args:
+    worksheet (str): Google sheet name to which results will be uploaded
+    ls_data (list): List results to be uploaded
+  """
   # Changing directory to comply with "cred.json" path in "gsheet.py".
   os.chdir('..')
 
-  gsheet.write_to_google_sheet(worksheet, list_data)
+  gsheet.write_to_google_sheet(worksheet, ls_data)
 
   os.chdir('./ls_metrics')  # Changing the directory back to current directory.
   return
 
 def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
+  """Writes list results to BigQuery
 
+  Args:
+    test_type (str): Table name to which results will be uploaded
+    config_id (str): Configuration ID of the experiment
+    start_time_build (str): Start time of the build
+    ls_data (list): List results to be uploaded
+  """
   bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
   ls_data_all = [[test_type] + row for row in ls_data]
   bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_all)
@@ -521,7 +553,7 @@ if __name__ == '__main__':
   if len(argv) < 5:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 listing_benchmark.py [--keep_files] [--upload] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file')
+                    'python3 listing_benchmark.py [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file')
 
   args = _parse_arguments(argv)
 
@@ -597,10 +629,10 @@ if __name__ == '__main__':
 
   for folder in directory_structure.folders:
     print(f'VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
-    print("Peak CPU utilization: ", gcs_results[folder.name][2], ", Mean CPU utilization: ", gcs_results[folder.name][3])
+    print(gcs_results[folder.name])
 
     print(f'VM metrics for listing tests (persistent disk) for folder: {folder.name}...')
-    print("Peak CPU utilization: ", pd_results[folder.name][2], ", Mean CPU utilization: ", pd_results[folder.name][3])
+    print(pd_results[folder.name])
 
   gcs_results_cpu = {}
   pd_results_cpu = {}
@@ -615,19 +647,21 @@ if __name__ == '__main__':
   results_gcs = []
   results_pd = []
 
-  for folder, value in zip(directory_structure.folders, temp_results_gcs):
-    temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + value + gcs_results_cpu[folder.name]
+  for folder, values in zip(directory_structure.folders, temp_results_gcs):
+    upload_values = [values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]]
+    temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + upload_values + gcs_results_cpu[folder.name]
     results_gcs.append(temp)
 
-  for folder, value in zip(directory_structure.folders, temp_results_pd):
-    temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + value + pd_results_cpu[folder.name]
+  for folder, values in zip(directory_structure.folders, temp_results_pd):
+    upload_values = [values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]]
+    temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values + pd_results_cpu[folder.name]
     results_pd.append(temp)
 
   for folder in directory_structure.folders:
     gcs_results_cpu[folder.name] = gcs_results[folder.name][2:]
     pd_results_cpu[folder.name] = pd_results[folder.name][2:]
 
-  if args.upload:
+  if args.upload_gs:
     log.info('Uploading files to the Google Sheet.\n')
     _export_to_gsheet(WORKSHEET_NAME_GCS, results_gcs)
     _export_to_gsheet(WORKSHEET_NAME_PD, results_pd)

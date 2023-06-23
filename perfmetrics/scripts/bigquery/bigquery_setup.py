@@ -11,17 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Python script for creating the dataset and tables under the project in BigQuery.
+"""Python script for creating the dataset and tables using the BigQuery service in GCP project.
 
 This python script calls the bigquery module to create the dataset that will store the tables,
 the table to store the experiment configurations and the tables to store the metrics data.
 Note: BigQuery API should be enabled for the project
 """
 import bigquery
-
-PROJECT_ID = 'gcs-fuse-test'
-DATASET_ID = 'performance_metrics'
+import constants
 
 if __name__ == '__main__':
-  bigquery_obj = bigquery.BigQuery(PROJECT_ID, DATASET_ID)
+  bigquery_obj = bigquery.BigQuery(constants.PROJECT_ID, constants.DATASET_ID)
   bigquery_obj.setup_dataset_and_tables()

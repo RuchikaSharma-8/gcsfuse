@@ -17,5 +17,5 @@ if [ "${KOKORO_JOB_TYPE}" != "RELEASE" ] && [ "${KOKORO_JOB_TYPE}" != "CONTINUOU
 then
   python3 listing_benchmark.py config.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" --command "ls -R" --num_samples 30 --message "Testing CT setup."
 else
-  python3 listing_benchmark.py config.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" --command "ls -R" --num_samples 30 --upload --upload_bq --message "Testing CT setup."
+  python3 listing_benchmark.py config.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" --command "ls -R" --num_samples 30 "$3" "$4" --message "Testing CT setup."
 fi

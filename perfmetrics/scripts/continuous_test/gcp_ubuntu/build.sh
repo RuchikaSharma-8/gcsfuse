@@ -64,11 +64,11 @@ CONFIG_ID=$(eval "python3 bigquery_get_config.py --gcsfuse_flags '$GCSFUSE_FLAGS
 # Executing perf tests
 cd ".."
 chmod +x run_load_test_and_fetch_metrics.sh
-./run_load_test_and_fetch_metrics.sh "$CONFIG_ID" "$START_TIME_BUILD"
+./run_load_test_and_fetch_metrics.sh "$CONFIG_ID" "$START_TIME_BUILD" --upload_gs --upload_bq
 
 sudo umount $MOUNT_POINT
 
 # ls_metrics test. This test does gcsfuse mount first and then do the testing.
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
-./run_ls_benchmark.sh "$CONFIG_ID" "$START_TIME_BUILD"
+./run_ls_benchmark.sh "$CONFIG_ID" "$START_TIME_BUILD" --upload_gs --upload_bq

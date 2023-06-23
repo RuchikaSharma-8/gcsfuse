@@ -8,6 +8,7 @@ from fio import fio_metrics
 from vm_metrics import vm_metrics
 from gsheet import gsheet
 from bigquery import bigquery
+from bigquery import constants
 
 INSTANCE = socket.gethostname()
 PERIOD_SEC = 120
@@ -34,7 +35,7 @@ def _parse_arguments(argv):
       action='store'
   )
   parser.add_argument(
-      '--upload',
+      '--upload_gs',
       help='Upload the results to the Google Sheet.',
       action='store_true',
       default=False,
@@ -72,11 +73,11 @@ if __name__ == '__main__':
 
   args = _parse_arguments(argv)
 
-  bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
 
   temp = fio_metrics_obj.get_metrics(args.fio_json_output_path)
   metrics_data = fio_metrics_obj.get_values_to_export(temp)
-  if args.upload:
+  if args.upload_gs:
     fio_metrics_obj.upload_metrics_to_gsheet(metrics_data, FIO_WORKSHEET_NAME)
   if args.upload_bq:
     fio_metrics_obj.upload_metrics_to_bigquery(metrics_data, args.config_id[0], args.start_time_build[0], 'fio')

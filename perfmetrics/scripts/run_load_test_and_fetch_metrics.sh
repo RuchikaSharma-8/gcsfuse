@@ -20,5 +20,5 @@ if [ "${KOKORO_JOB_TYPE}" != "RELEASE" ] && [ "${KOKORO_JOB_TYPE}" != "CONTINUOU
 then
   python3 fetch_metrics.py fio-output.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD"
 else
-  python3 fetch_metrics.py fio-output.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" --upload --upload_bq
+  python3 fetch_metrics.py fio-output.json --config_id "$CONFIG_ID" --start_time_build "$START_TIME_BUILD" "$3" "$4"
 fi

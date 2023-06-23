@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Python script for getting the experiment configuration ID.
+"""Python script for fetching and printing experiment configuration ID.
 
-This python script calls the bigquery module with the experiment details and gets the configuration ID
+This python script calls the bigquery module with the experiment details and inserts configuration
+if it doesn't exist and only updates end_date in case of existing configuration and gets the configuration ID
 
 Typical usage example from bigquery folder:
-  $ python3 bigquery_get_config.py [-h] [--gcsfuse_flags GCSFUSE_FLAGS] [--branch BRANCH] [--end_date END_DATE] [--config_name CONFIG_NAME]
+  $ python3 get_experiments_config.py [-h] [--gcsfuse_flags GCSFUSE_FLAGS] [--branch BRANCH] [--end_date END_DATE] [--config_name CONFIG_NAME]
 
   Flag -h: Typical help interface of the script.
   Flag gcsfuse_flags (required: str): Set of flags the gcsfuse flags used for experiment.
@@ -27,7 +28,7 @@ Typical usage example from bigquery folder:
 Note: BigQuery API should be enabled for the project
 """
 import bigquery
-import bigquery_setup
+import constants
 import argparse
 import sys
 
@@ -75,6 +76,6 @@ def parse_arguments(argv):
 if __name__ == '__main__':
   argv = sys.argv
   args = parse_arguments(argv)
-  bigquery_obj = bigquery.ExperimentsGCSFuseBQ(bigquery_setup.PROJECT_ID, bigquery_setup.DATASET_ID)
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
   exp_config_id = bigquery_obj.get_experiment_configuration_id(args.gcsfuse_flags[0], args.branch[0], args.end_date[0], args.config_name[0])
   print(exp_config_id)
