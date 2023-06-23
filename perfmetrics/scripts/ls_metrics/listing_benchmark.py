@@ -543,9 +543,9 @@ def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
     start_time_build (str): Start time of the build
     ls_data (list): List results to be uploaded
   """
-  bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
-  ls_data_all = [[test_type] + row for row in ls_data]
-  bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_all)
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
+  ls_data_upload = [[test_type] + row for row in ls_data]
+  bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_upload)
   return
 
 if __name__ == '__main__':
