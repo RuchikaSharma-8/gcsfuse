@@ -50,17 +50,21 @@ echo Installing requirements..
 pip install --require-hashes -r requirements.txt --user
 
 UPLOAD_FLAGS=""
+if [ "${KOKORO_JOB_TYPE}" == "RELEASE" ] || [ "${KOKORO_JOB_TYPE}" == "CONTINUOUS_INTEGRATION" ] || [ "${KOKORO_JOB_TYPE}" == "PRESUBMIT_GITHUB" ];
+then
+  UPLOAD_FLAGS="--upload_bq"
+fi
 
 # Executing perf tests
 LOG_FILE_FIO_TESTS=${KOKORO_ARTIFACTS_DIR}/gcsfuse-logs.txt
 GCSFUSE_FIO_FLAGS="$GCSFUSE_FLAGS --log-file $LOG_FILE_FIO_TESTS"
 cd ".."
 chmod +x run_load_test_and_fetch_metrics.sh
-./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FIO_FLAGS" $UPLOAD_FLAGS
+./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FIO_FLAGS" "$UPLOAD_FLAGS"
 
 # ls_metrics test. This test does gcsfuse mount with the passed flags first and then does the testing.
 LOG_FILE_LIST_TESTS=gcsfuse-list-logs.txt
 GCSFUSE_LIST_FLAGS="$GCSFUSE_FLAGS --log-file $LOG_FILE_LIST_TESTS"
 cd "./ls_metrics"
 chmod +x run_ls_benchmark.sh
-./run_ls_benchmark.sh "$GCSFUSE_LIST_FLAGS" $UPLOAD_FLAGS
+./run_ls_benchmark.sh "$GCSFUSE_LIST_FLAGS" "$UPLOAD_FLAGS"

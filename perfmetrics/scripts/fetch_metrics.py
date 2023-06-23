@@ -123,7 +123,7 @@ if __name__ == '__main__':
       vm_metrics_data.append(row)
 
   vm_metrics_data_upload = [row[1:] + [None, None, None, None, None, None, None, None] for row in vm_metrics_data]
-  if args.upload:
+  if args.upload_gs:
     gsheet.write_to_google_sheet(VM_WORKSHEET_NAME, vm_metrics_data_upload)
   if args.upload_bq:
     if not args.config_id or args.start_time_build:

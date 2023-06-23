@@ -22,10 +22,5 @@ gsutil cp gs://periodic-perf-tests/creds.json gsheet
 UPLOAD_FLAGS=$2
 
 echo Fetching results..
-if [ "${KOKORO_JOB_TYPE}" == "RELEASE" ] || [ "${KOKORO_JOB_TYPE}" == "CONTINUOUS_INTEGRATION" ] || [ "${KOKORO_JOB_TYPE}" == "PRESUBMIT_GITHUB" ];
-then
-  python3 fetch_metrics.py fio-output.json
-else
-  python3 fetch_metrics.py fio-output.json "$UPLOAD_FLAGS"
-fi
+python3 fetch_metrics.py fio-output.json "$UPLOAD_FLAGS"
 
