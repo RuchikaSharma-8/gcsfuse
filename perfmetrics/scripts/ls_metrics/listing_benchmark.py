@@ -534,7 +534,7 @@ def _export_to_gsheet(worksheet, ls_data):
   os.chdir('./ls_metrics')  # Changing the directory back to current directory.
   return
 
-def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
+def _export_to_bigquery(mount_type, config_id, start_time_build, ls_data):
   """Writes list results to BigQuery
 
   Args:
@@ -544,7 +544,7 @@ def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
     ls_data (list): List results to be uploaded
   """
   bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
-  ls_data_upload = [[test_type] + row for row in ls_data]
+  ls_data_upload = [[mount_type] + row for row in ls_data]
   bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_upload)
   return
 
@@ -648,12 +648,12 @@ if __name__ == '__main__':
   results_pd = []
 
   for folder, values in zip(directory_structure.folders, temp_results_gcs):
-    upload_values = [values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]]
+    upload_values = values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]
     temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + upload_values + gcs_results_vm[folder.name]
     results_gcs.append(temp)
 
   for folder, values in zip(directory_structure.folders, temp_results_pd):
-    upload_values = [values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]]
+    upload_values = values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]
     temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values + pd_results_vm[folder.name]
     results_pd.append(temp)
 
