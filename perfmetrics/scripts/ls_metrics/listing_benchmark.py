@@ -449,15 +449,15 @@ def _parse_arguments(argv):
   parser.add_argument(
       '--config_id',
       help='Configuration id of the experiment in the BigQuery tables',
-      action='store',
-      nargs=1,
-      required=True,
+      action='store_true',
+      default=False,
+      required=False,
   )
   parser.add_argument(
       '--start_time_build',
       help='Time at which KOKORO triggered the build script.',
-      action='store',
-      nargs=1,
+      action='store_true',
+      default=False,
       required=False,
   )
   parser.add_argument(
