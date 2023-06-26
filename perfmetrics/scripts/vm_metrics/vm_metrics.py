@@ -27,7 +27,6 @@ import google.cloud
 from google.cloud import monitoring_v3
 from gsheet import gsheet
 from typing import List
-from bigquery import bigquery
 
 PROJECT_NAME = 'projects/gcs-fuse-test-ml'
 CPU_UTI_METRIC_TYPE = 'compute.googleapis.com/instance/cpu/utilization'
