@@ -6,7 +6,8 @@ containing files and folders, needed to test the listing operation. Furthermore,
 it can optionally upload the results of the test to a Google Sheet or Bigquery. It takes
 input a JSON config file whcih contains the info regrading directory structure
 and also through which multiple tests of different configurations can be
-performed in a single run.
+performed in a single run. It also extracts VM metrics for folders '1KB_100000files_0subdir'
+and '1KB_200000files_0subdir' in case of mount_type 'gcs_bucket'.
 
 Typical usage example:
   $ python3 listing_benchmark.py [-h] [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] [--config_id CONFIG_ID] [--start_time_build START_TIME_BUILD] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file
@@ -36,13 +37,13 @@ import statistics as stat
 import subprocess
 import sys
 import time
+import numpy as np
 
 import directory_pb2 as directory_proto
 sys.path.insert(0, '..')
 import generate_files
 from google.protobuf.json_format import ParseDict
 from gsheet import gsheet
-import numpy as np
 import fetch_metrics
 from bigquery import bigquery
 from vm_metrics import vm_metrics
@@ -117,33 +118,31 @@ def _get_values_to_export(folders, metrics, command) -> list:
 
   return list_metrics_data
 
-def _parse_results(folders, result_list, message, num_samples) -> dict:
+def _parse_results(folders, time_intervals_dict, message, num_samples) -> dict:
   """Outputs the results on the console.
-
   This function takes in dictionary containing the list of results (for all
   samples) for each testing folder, for both the gcs bucket and persistent disk.
   Then it generates various metrics out of these lists and outputs them into
   the console.
-
   The metrics present in the output are (in msec):
   Mean, Median, Standard Dev, 0th %ile, 20th %ile, 50th %ile, 90th %ile,
   95th %ile, 98th %ile, 99th %ile, 99.5th %ile, 99.9th %ile, 100th %ile.
-
   Args:
     folders: List containing protobufs of testing folders.
-    result_list: Dictionary containing the list of start and end times
+    time_intervals_dict: Dictionary containing the list of start and end times
                  (for all samples) for each testing folder.
     message: String which describes/titles the test.
     num_samples: Number of samples to collect for each test.
-
   Returns:
     A dictionary containing the various metrics in a JSON format.
   """
 
   # Dictionary containing the latencies (for all samples) for each testing folder
-  results_list = {}
+  factor_sec_to_msec = 1000
+  latency_dict = {}
   for testing_folder in folders:
-    results_list[testing_folder.name] = [(row[1] - row[0])*1000 for row in result_list[testing_folder.name]]
+    # time[1] is the end time and time[0] is the start time for the samples
+    latency_dict[testing_folder.name] = [(time[1] - time[0])*factor_sec_to_msec for time in time_intervals_dict[testing_folder.name]]
 
   metrics = dict()
 
@@ -153,20 +152,20 @@ def _parse_results(folders, result_list, message, num_samples) -> dict:
     metrics[testing_folder.name]['Number of samples'] = num_samples
 
     # Sorting based on time.
-    results_list[testing_folder.name] = sorted(
-        results_list[testing_folder.name])
+    latency_dict[testing_folder.name] = sorted(
+        latency_dict[testing_folder.name])
     metrics[testing_folder.name]['Mean'] = round(
-        stat.mean(results_list[testing_folder.name]), 3)
+        stat.mean(latency_dict[testing_folder.name]), 3)
     metrics[testing_folder.name]['Median'] = round(
-        stat.median(results_list[testing_folder.name]), 3)
+        stat.median(latency_dict[testing_folder.name]), 3)
     metrics[testing_folder.name]['Standard Dev'] = round(
-        stat.stdev(results_list[testing_folder.name]), 3)
+        stat.stdev(latency_dict[testing_folder.name]), 3)
 
     metrics[testing_folder.name]['Quantiles'] = dict()
     sample_set = [0, 20, 50, 90, 95, 98, 99, 99.5, 99.9, 100]
     for percentile in sample_set:
       metrics[testing_folder.name]['Quantiles']['{} %ile'.format(percentile)] = round(
-          np.percentile(results_list[testing_folder.name], percentile), 3)
+          np.percentile(latency_dict[testing_folder.name], percentile), 3)
 
   print(metrics)
   return metrics
@@ -181,10 +180,10 @@ def _record_time_of_operation(command, path, num_samples) -> list:
     num_samples: Number of times to run the command.
 
   Returns:
-    A list containing the start and end times of operations.
+    A list containing the start and end epoch times of operations.
   """
 
-  result_list = []
+  time_intervals_list = []
 
   for _ in range(num_samples):
     start_time_sec = time.time()
@@ -192,9 +191,9 @@ def _record_time_of_operation(command, path, num_samples) -> list:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.STDOUT)
     end_time_sec = time.time()
-    result_list.append([start_time_sec, end_time_sec])
+    time_intervals_list.append([start_time_sec, end_time_sec])
 
-  return result_list
+  return time_intervals_list
 
 def _perform_testing(
     folders, gcs_bucket, persistent_disk, num_samples, command):
@@ -202,7 +201,7 @@ def _perform_testing(
 
   Going through all the testing folders one by one for both GCS bucket and
   persistent disk, we calculate the latency (in msec) of listing operation
-  and store the results in a list of that particular testing folder. Reading
+  and store the time intervals in a list of that particular testing folder. Reading
   are taken multiple times as specified by num_samples argument.
 
   Args:
@@ -214,27 +213,30 @@ def _perform_testing(
     command: Command to run the test on.
 
   Returns:
-    gcs_bucket_results: A dictionary containing the list of start and end
+    gcs_bucket_time_intervals: A dictionary containing the list of start and end
                         times (all samples) for each testing folder.
-    persistent_disk_results: A dictionary containing the list of start and
+    persistent_disk_time_intervals: A dictionary containing the list of start and
                              end times (all samples) for each testing folder.
   """
 
-  gcs_bucket_results = {}
-  persistent_disk_results = {}
+  gcs_bucket_time_intervals = {}
+  persistent_disk_time_intervals = {}
 
   for testing_folder in folders:
     log.info('Testing started for testing folder: %s\n', testing_folder.name)
     local_dir_path = './{}/{}/'.format(persistent_disk, testing_folder.name)
     gcs_bucket_path = './{}/{}/'.format(gcs_bucket, testing_folder.name)
 
-    persistent_disk_results[testing_folder.name] = _record_time_of_operation(
+    persistent_disk_time_intervals[testing_folder.name] = _record_time_of_operation(
         command, local_dir_path, num_samples)
-    gcs_bucket_results[testing_folder.name] = _record_time_of_operation(
+    # Sleep time given to get more accurate VM metrics
+    if(testing_folder.name == '1KB_100000files_0subdir' or testing_folder.name == '1KB_200000files_0subdir'):
+      time.sleep(60)
+    gcs_bucket_time_intervals[testing_folder.name] = _record_time_of_operation(
         command, gcs_bucket_path, num_samples)
 
   log.info('Testing completed. Generating output.\n')
-  return gcs_bucket_results, persistent_disk_results
+  return gcs_bucket_time_intervals, persistent_disk_time_intervals
 
 def _create_directory_structure(
     gcs_bucket_url, persistent_disk_url, directory_structure, create_files_in_gcs) -> int:
@@ -500,11 +502,11 @@ def _check_dependencies(packages) -> None:
 
   return
 
-def _extract_vm_metrics(results_list, folders, mount_type) -> list:
+def _extract_vm_metrics(time_intervals_list, folders, mount_type) -> list:
   """Extracts VM metrics for testing folders '1KB_100000files_0subdir' and testing_folder.name
    for mount type 'gcs_bucket'
   Args:
-    results_list (list): List containing the start and end times
+    time_intervals_list (list): List containing the start and end times
                         (for all samples) for each testing folder.
     folders (list): List containing protobufs of testing folders.
     mount_type (str): Access type of folder. It can take 2 values:
@@ -516,9 +518,9 @@ def _extract_vm_metrics(results_list, folders, mount_type) -> list:
   vm_metrics_data = {}
   # Getting VM metrics for listing tests on each folder
   for testing_folder in folders:
-    # Getting start and end times for all 30 samples
-    start_time_first_sample = results_list[testing_folder.name][0][0]
-    end_time_last_sample = results_list[testing_folder.name][-1][-1]
+    # Getting start and end times for all 300 samples
+    start_time_first_sample = time_intervals_list[testing_folder.name][0][0]
+    end_time_last_sample = time_intervals_list[testing_folder.name][-1][-1]
     metrics_data = []
 
     if((testing_folder.name == '1KB_100000files_0subdir' or testing_folder.name == '1KB_200000files_0subdir') and mount_type == 'gcs_bucket'):
