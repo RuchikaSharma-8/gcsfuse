@@ -18,7 +18,7 @@ Typical usage example:
   Flag --upload_bq: Uploads the results of the test to the BigQuery.
   Flag --num_samples: Runs each test for NUM_SAMPLES times.
   Flag --message: Takes input a message string, which describes/titles the test.
-  Flag --config_id: Configuration if of the experiment in BigQuery tables.
+  Flag --config_id: Configuration id of the experiment in BigQuery tables.
   Flag --start_time_build: Time at which KOKORO triggered the build scripts
   Flag --gcsfuse_flags (required): GCSFUSE flags with which the list tests bucket will be mounted.
   Flag --command (required): Takes as input a string, which is the command to run
