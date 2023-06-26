@@ -52,7 +52,7 @@ def _parse_arguments(argv):
       '--config_id',
       help='Configuration ID of the experiment',
       action='store_true',
-      ndefault=False,
+      default=False,
       required=False,
   )
   parser.add_argument(

@@ -522,7 +522,6 @@ def _extract_vm_metrics(results_list, folders, mount_type) -> list:
     metrics_data = []
 
     if((testing_folder.name == '1KB_100000files_0subdir' or testing_folder.name == '1KB_200000files_0subdir') and mount_type == 'gcs_bucket'):
-      time.sleep(60)
       metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
                                                   fetch_metrics.INSTANCE, fetch_metrics.PERIOD_SEC, 'list')
     else:

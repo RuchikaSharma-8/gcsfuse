@@ -48,6 +48,8 @@ class ExperimentsGCSFuseBQ:
   def __init__(self, project_id, dataset_id, bq_client=None):
     if bq_client is None:
       self.client = bigquery.Client(project=project_id)
+    else:
+      self.client = bq_client
     self.project_id = project_id
     self.dataset_id = dataset_id
 

@@ -52,7 +52,7 @@ pip install --require-hashes -r requirements.txt --user
 UPLOAD_FLAGS=""
 if [ "${KOKORO_JOB_TYPE}" == "RELEASE" ] || [ "${KOKORO_JOB_TYPE}" == "CONTINUOUS_INTEGRATION" ] || [ "${KOKORO_JOB_TYPE}" == "PRESUBMIT_GITHUB" ];
 then
-  UPLOAD_FLAGS="--upload_bq"
+  UPLOAD_FLAGS="--upload_gs"
 fi
 
 # Executing perf tests

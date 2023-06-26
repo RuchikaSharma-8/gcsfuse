@@ -23,4 +23,3 @@ UPLOAD_FLAGS=$2
 
 echo Fetching results..
 python3 fetch_metrics.py fio-output.json "$UPLOAD_FLAGS"
-
