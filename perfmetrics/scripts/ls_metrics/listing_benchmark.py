@@ -9,7 +9,7 @@ and also through which multiple tests of different configurations can be
 performed in a single run.
 
 Typical usage example:
-  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file
+  $ python3 listing_benchmark.py [-h] [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] [--config_id CONFIG_ID] [--start_time_build START_TIME_BUILD] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file
 
   Flag -h: Typical help interface of the script.
   Flag --keep_files: Do not delete the generated directory structure from the
@@ -18,10 +18,10 @@ Typical usage example:
   Flag --upload_bq: Uploads the results of the test to the BigQuery.
   Flag --num_samples: Runs each test for NUM_SAMPLES times.
   Flag --message: Takes input a message string, which describes/titles the test.
-  Flag --config_id (required): Configuration if of the experiment in BigQuery tables.
-  Flag --start_time_build (required): Time at which KOKORO triggered the build scripts
-  Flag --command (required): Takes a input a string, which is the command to run
-                             the tests on.
+  Flag --config_id: Configuration if of the experiment in BigQuery tables.
+  Flag --start_time_build: Time at which KOKORO triggered the build scripts
+  Flag --gcsfuse_flags (required): GCSFUSE flags with which the list tests bucket will be mounted.
+  Flag --command (required): Takes as input a string, which is the command to run
   config_file (required): Path to the JSON config file which contains the
                           details of the tests.
 
@@ -201,7 +201,7 @@ def _perform_testing(
   """This function tests the listing operation on the testing folders.
 
   Going through all the testing folders one by one for both GCS bucket and
-  peristent disk, we calculate the latency (in msec) of listing operation
+  persistent disk, we calculate the latency (in msec) of listing operation
   and store the results in a list of that particular testing folder. Reading
   are taken multiple times as specified by num_samples argument.
 
@@ -252,8 +252,8 @@ def _create_directory_structure(
                         files in.
    directory_structure: Protobuf of the current directory.
    create_files_in_gcs: Bool value which is True if we have to create files
-                        in GCS bucket (similar directory strucutre not present).
-                        Otherwise it is False, means that we will not create
+                        in GCS bucket (similar directory structure not present).
+                        Otherwise, it is False, means that we will not create
                         files in GCS bucket from scratch.
 
   Returns:
@@ -363,11 +363,12 @@ def _unmount_gcs_bucket(gcs_bucket) -> None:
         gcs_bucket)
 
 
-def _mount_gcs_bucket(bucket_name) -> str:
+def _mount_gcs_bucket(bucket_name, gcsfuse_flags) -> str:
   """Mounts the GCS bucket into the gcs_bucket directory.
 
   Args:
     bucket_name: Name of the bucket to be mounted.
+    gcsfuse_flags: Set of flags for which bucket_name will be mounted
 
   Returns:
     A string which contains the name of the directory to which the bucket
@@ -382,8 +383,8 @@ def _mount_gcs_bucket(bucket_name) -> str:
   subprocess.call('mkdir {}'.format(gcs_bucket), shell=True)
 
   exit_code = subprocess.call(
-      'gcsfuse --implicit-dirs --enable-storage-client-library --max-conns-per-host 100 {} {}'.format(
-          bucket_name, gcs_bucket), shell=True)
+      'gcsfuse {} {} {}'.format(
+          gcsfuse_flags, bucket_name, gcs_bucket), shell=True)
   if exit_code != 0:
     log.error('Cannot mount the GCS bucket due to exit code %s.\n', exit_code)
     subprocess.call('bash', shell=True)
@@ -395,7 +396,7 @@ def _parse_arguments(argv):
   """Parses the arguments provided to the script via command line.
 
   Args:
-    argv: List of arguments recevied by the script.
+    argv: List of arguments received by the script.
 
   Returns:
     A class containing the parsed arguments.
@@ -446,23 +447,30 @@ def _parse_arguments(argv):
       required=False,
   )
   parser.add_argument(
+      '--config_id',
+      help='Configuration id of the experiment in the BigQuery tables',
+      action='store_true',
+      default=False,
+      required=False,
+  )
+  parser.add_argument(
+      '--start_time_build',
+      help='Time at which KOKORO triggered the build script.',
+      action='store_true',
+      default=False,
+      required=False,
+  )
+  parser.add_argument(
       '--command',
       help='Command to run the tests on.',
       action='store',
       nargs=1,
       default=['ls -R'],
-      required=True,
+      required=False,
   )
   parser.add_argument(
-      '--config_id',
-      help='Configuration id of the experiment in the BigQuery tables',
-      action='store',
-      nargs=1,
-      required=True,
-  )
-  parser.add_argument(
-      '--start_time_build',
-      help='Time at which KOKORO triggered the build script.',
+      '--gcsfuse_flags',
+      help='Gcsfuse flags for mounting the list tests bucket. Example set of flags - "--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-file $LOG_FILE --log-format \"text\" --stackdriver-export-interval=30s"',
       action='store',
       nargs=1,
       required=True,
@@ -492,13 +500,15 @@ def _check_dependencies(packages) -> None:
 
   return
 
-def _extract_vm_metrics(results_list, folders) -> list:
-  """Extracts VM metrics for each testing folder.
-
+def _extract_vm_metrics(results_list, folders, mount_type) -> list:
+  """Extracts VM metrics for testing folders '1KB_100000files_0subdir' and testing_folder.name
+   for mount type 'gcs_bucket'
   Args:
     results_list (list): List containing the start and end times
                         (for all samples) for each testing folder.
     folders (list): List containing protobufs of testing folders.
+    mount_type (str): Access type of folder. It can take 2 values:
+                      'gcs_bucket' or 'persistent_disk'
   Returns:
     list: A list of extracted metrics
   """
@@ -506,16 +516,17 @@ def _extract_vm_metrics(results_list, folders) -> list:
   vm_metrics_data = {}
   # Getting VM metrics for listing tests on each folder
   for testing_folder in folders:
-
     # Getting start and end times for all 30 samples
     start_time_first_sample = results_list[testing_folder.name][0][0]
     end_time_last_sample = results_list[testing_folder.name][-1][-1]
+    metrics_data = []
 
-    metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
-                                                fetch_metrics.INSTANCE, fetch_metrics.PERIOD_SEC, 'list')
-
-    for row in metrics_data:
-      vm_metrics_data[testing_folder.name] = row
+    if((testing_folder.name == '1KB_100000files_0subdir' or testing_folder.name == '1KB_200000files_0subdir') and mount_type == 'gcs_bucket'):
+      metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
+                                                  fetch_metrics.INSTANCE, fetch_metrics.PERIOD_SEC, 'list')
+    else:
+      metrics_data = [[start_time_first_sample, end_time_last_sample, None, None, None, None]]
+    vm_metrics_data[testing_folder.name] = metrics_data[0]
 
   return vm_metrics_data
 
@@ -534,7 +545,7 @@ def _export_to_gsheet(worksheet, ls_data):
   os.chdir('./ls_metrics')  # Changing the directory back to current directory.
   return
 
-def _export_to_bigquery(mount_type, config_id, start_time_build, ls_data):
+def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
   """Writes list results to BigQuery
 
   Args:
@@ -544,16 +555,16 @@ def _export_to_bigquery(mount_type, config_id, start_time_build, ls_data):
     ls_data (list): List results to be uploaded
   """
   bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
-  ls_data_upload = [[mount_type] + row for row in ls_data]
+  ls_data_upload = [[test_type] + row for row in ls_data]
   bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_upload)
   return
 
 if __name__ == '__main__':
   argv = sys.argv
-  if len(argv) < 5:
+  if len(argv) < 6:
     raise TypeError('Incorrect number of arguments.\n'
                     'Usage: '
-                    'python3 listing_benchmark.py [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] --config_id CONFIG_ID --start_time_build START_TIME_BUILD --command COMMAND config_file')
+                    'python3 listing_benchmark.py [--keep_files] [--upload_gs] [--upload_bq] [--num_samples NUM_SAMPLES] [--message MESSAGE] [--config_id CONFIG_ID] [--start_time_build START_TIME_BUILD] --gcsfuse_flags GCSFUSE_FLAGS --command COMMAND config_file')
 
   args = _parse_arguments(argv)
 
@@ -604,7 +615,7 @@ if __name__ == '__main__':
     subprocess.call('bash', shell=True)
   log.info('Directory Structure Created.\n')
 
-  gcs_bucket = _mount_gcs_bucket(directory_structure.name)
+  gcs_bucket = _mount_gcs_bucket(directory_structure.name, args.gcsfuse_flags[0])
 
   gcs_bucket_results, persistent_disk_results = _perform_testing(
       directory_structure.folders, gcs_bucket, persistent_disk,
@@ -624,8 +635,8 @@ if __name__ == '__main__':
   # waiting for 360 secs instead of 240 secs
   time.sleep(360)
 
-  gcs_results = _extract_vm_metrics(gcs_bucket_results, directory_structure.folders)
-  pd_results = _extract_vm_metrics(persistent_disk_results, directory_structure.folders)
+  gcs_results = _extract_vm_metrics(gcs_bucket_results, directory_structure.folders, 'gcs_bucket')
+  pd_results = _extract_vm_metrics(persistent_disk_results, directory_structure.folders, 'persistent_disk')
 
   for folder in directory_structure.folders:
     print(f'VM metrics for listing tests (gcs bucket) for folder: {folder.name}...')
@@ -663,6 +674,8 @@ if __name__ == '__main__':
     _export_to_gsheet(WORKSHEET_NAME_PD, results_pd)
 
   if args.upload_bq:
+    if not args.config_id or args.start_time_build:
+      raise Exception("Pass required arguments experiments configuration ID and start time of build for uploading to BigQuery")
     log.info('Uploading results to the BigQuery.\n')
     _export_to_bigquery('gcs_bucket', args.config_id[0], args.start_time_build[0], results_gcs)
     _export_to_bigquery('persistent_disk', args.config_id[0], args.start_time_build[0], results_pd)

@@ -48,6 +48,8 @@ class ExperimentsGCSFuseBQ:
   def __init__(self, project_id, dataset_id, bq_client=None):
     if bq_client is None:
       self.client = bigquery.Client(project=project_id)
+    else:
+      self.client = bq_client
     self.project_id = project_id
     self.dataset_id = dataset_id
 
@@ -192,9 +194,9 @@ class ExperimentsGCSFuseBQ:
         configuration_id STRING,
         start_time_build INT64,
         mount_type STRING, 
+        command STRING,
         start_time FLOAT64, 
         end_time FLOAT64,
-        command STRING,
         num_files INT64, 
         num_samples INT64, 
         min_latency_msec FLOAT64,
