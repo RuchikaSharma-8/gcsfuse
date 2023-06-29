@@ -21,5 +21,5 @@ import bigquery
 import constants
 
 if __name__ == '__main__':
-  bigquery_obj = bigquery.BigQuery(constants.PROJECT_ID, constants.DATASET_ID)
+  bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
   bigquery_obj.setup_dataset_and_tables()

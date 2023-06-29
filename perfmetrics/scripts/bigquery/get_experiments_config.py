@@ -20,7 +20,7 @@ Typical usage example from bigquery folder:
   $ python3 get_experiments_config.py [-h] [--gcsfuse_flags GCSFUSE_FLAGS] [--branch BRANCH] [--end_date END_DATE] [--config_name CONFIG_NAME]
 
   Flag -h: Typical help interface of the script.
-  Flag gcsfuse_flags (required: str): Set of flags the gcsfuse flags used for experiment.
+  Flag gcsfuse_flags (required: str): Set of gcsfuse flags used for experiment.
   Flag branch (required: str): GCSFuse repo branch used for building GCSFuse.
   Flag end_date (required: timestamp): Date till when experiments of this configuration are run.
   Flag config_name (required: str): Name of the experiment configuration.

@@ -45,9 +45,8 @@ cd "./perfmetrics/scripts/"
 
 GCSFUSE_FLAGS="--implicit-dirs --max-conns-per-host 100 --enable-storage-client-library --debug_fuse --debug_gcs --log-format \"text\" --stackdriver-export-interval=30s"
 
-cd "./bigquery"
 echo Installing requirements..
-pip install --require-hashes -r requirements.txt --user
+pip install --require-hashes -r bigquery/requirements.txt --user
 
 UPLOAD_FLAGS=""
 if [ "${KOKORO_JOB_TYPE}" == "RELEASE" ] || [ "${KOKORO_JOB_TYPE}" == "CONTINUOUS_INTEGRATION" ] || [ "${KOKORO_JOB_TYPE}" == "PRESUBMIT_GITHUB" ];
@@ -58,7 +57,6 @@ fi
 # Executing perf tests
 LOG_FILE_FIO_TESTS=${KOKORO_ARTIFACTS_DIR}/gcsfuse-logs.txt
 GCSFUSE_FIO_FLAGS="$GCSFUSE_FLAGS --log-file $LOG_FILE_FIO_TESTS"
-cd ".."
 chmod +x run_load_test_and_fetch_metrics.sh
 ./run_load_test_and_fetch_metrics.sh "$GCSFUSE_FIO_FLAGS" "$UPLOAD_FLAGS"
 

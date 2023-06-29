@@ -58,6 +58,9 @@ log = logging.getLogger()
 
 WORKSHEET_NAME_GCS = 'ls_metrics_gcsfuse'
 WORKSHEET_NAME_PD = 'ls_metrics_persistent_disk'
+VM_METRICS_EXTRACTION_DIRS = ['1KB_100000files_0subdir', '1KB_200000files_0subdir']
+MOUNT_TYPE_GCS = 'gcs_bucket'
+MOUNT_TYPE_PD = 'persistent_disk'
 
 def _count_number_of_files_and_folders(directory, files, folders):
   """Count the number of files and folders in the given directory recursively.
@@ -230,7 +233,7 @@ def _perform_testing(
     persistent_disk_time_intervals[testing_folder.name] = _record_time_of_operation(
         command, local_dir_path, num_samples)
     # Sleep time given to get more accurate VM metrics
-    if(testing_folder.name == '1KB_100000files_0subdir' or testing_folder.name == '1KB_200000files_0subdir'):
+    if testing_folder.name in VM_METRICS_EXTRACTION_DIRS:
       time.sleep(60)
     gcs_bucket_time_intervals[testing_folder.name] = _record_time_of_operation(
         command, gcs_bucket_path, num_samples)
@@ -523,7 +526,7 @@ def _extract_vm_metrics(time_intervals_list, folders, mount_type) -> list:
     end_time_last_sample = time_intervals_list[testing_folder.name][-1][-1]
     metrics_data = []
 
-    if((testing_folder.name == '1KB_100000files_0subdir' or testing_folder.name == '1KB_200000files_0subdir') and mount_type == 'gcs_bucket'):
+    if testing_folder.name in VM_METRICS_EXTRACTION_DIRS and mount_type == 'gcs_bucket':
       metrics_data = vm_metrics_obj.fetch_metrics(start_time_first_sample, end_time_last_sample,
                                                   fetch_metrics.INSTANCE, fetch_metrics.PERIOD_SEC, 'list')
     else:
@@ -558,7 +561,7 @@ def _export_to_bigquery(test_type, config_id, start_time_build, ls_data):
   """
   bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
   ls_data_upload = [[test_type] + row for row in ls_data]
-  bigquery_obj.upload_metrics_to_table('list', config_id, start_time_build, ls_data_upload)
+  bigquery_obj.upload_metrics_to_table(constants.LS_TABLE_ID, config_id, start_time_build, ls_data_upload)
   return
 
 if __name__ == '__main__':
@@ -660,15 +663,15 @@ if __name__ == '__main__':
   results_gcs = []
   results_pd = []
 
-  for folder, values in zip(directory_structure.folders, temp_results_gcs):
-    upload_values = values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]
-    temp = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + upload_values + gcs_results_vm[folder.name]
-    results_gcs.append(temp)
-
-  for folder, values in zip(directory_structure.folders, temp_results_pd):
-    upload_values = values[1:3] + [values[4]] + [values[8]] + [values[17]] + values[5:8] + values[9:13]
-    temp = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values + pd_results_vm[folder.name]
-    results_pd.append(temp)
+  for folder, values_gcs, values_pd in zip(directory_structure.folders, temp_results_gcs, temp_results_pd):
+    # Only some extracted metrics will be uploaded to Google Spreadsheets and BigQuery
+    upload_values_gcs = values_gcs[1:3] + [values_gcs[4]] + [values_gcs[8]] + [values_gcs[17]] + values_gcs[5:8] + values_gcs[9:13]
+    upload_values_pd = values_pd[1:3] + [values_pd[4]] + [values_pd[8]] + [values_pd[17]] + values_pd[5:8] + values_pd[9:13]
+    # Combining list metrics and VM metrics
+    temp_gcs = [gcs_bucket_results[folder.name][0][0], gcs_bucket_results[folder.name][-1][-1]] + upload_values_gcs + gcs_results_vm[folder.name]
+    temp_pd = [persistent_disk_results[folder.name][0][0], persistent_disk_results[folder.name][-1][-1]] + upload_values_pd + pd_results_vm[folder.name]
+    results_gcs.append(temp_gcs)
+    results_pd.append(temp_pd)
 
   if args.upload_gs:
     log.info('Uploading files to the Google Sheet.\n')
@@ -679,9 +682,8 @@ if __name__ == '__main__':
     if not args.config_id or args.start_time_build:
       raise Exception("Pass required arguments experiments configuration ID and start time of build for uploading to BigQuery")
     log.info('Uploading results to the BigQuery.\n')
-    _export_to_bigquery('gcs_bucket', args.config_id[0], args.start_time_build[0], results_gcs)
-    _export_to_bigquery('persistent_disk', args.config_id[0], args.start_time_build[0], results_pd)
-
+    _export_to_bigquery(MOUNT_TYPE_GCS, args.config_id[0], args.start_time_build[0], results_gcs)
+    _export_to_bigquery(MOUNT_TYPE_PD, args.config_id[0], args.start_time_build[0], results_pd)
 
   if not args.keep_files:
     log.info('Deleting files from persistent disk.\n')

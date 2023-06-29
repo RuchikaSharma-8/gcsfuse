@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple, Callable
 from fio import constants as consts
 from gsheet import gsheet
 from bigquery import bigquery
-
+from bigquery import constants
 
 @dataclass(frozen=True)
 class JobParam:
@@ -424,13 +424,13 @@ class FioMetrics:
 
     return all_jobs
 
-  def get_values_to_export(self, jobs):
+  def get_values_to_upload(self, jobs):
     """Get the metrics values in a list to export to Google Spreadsheet and BigQuery.
 
     Args:
       jobs: List of dicts, contains required metrics for each job
     Returns:
-      list: List of metrics values for each job
+      list: A 2-d list consisting of metrics values for each job
     """
 
     values = []
@@ -468,17 +468,17 @@ class FioMetrics:
     """
     gsheet.write_to_google_sheet(worksheet_name, metrics_data)
 
-  def upload_metrics_to_bigquery(self, metrics_data, config_id, start_time_build, table_name_bq):
+  def upload_metrics_to_bigquery(self, metrics_data, config_id, start_time_build, table_id_bq):
     """Uploads metrics data for load tests to Google Spreadsheets
 
     Args:
       metrics_data (list): List of metric values for each job
       config_id (str): configuration ID of the experiment
       start_time_build (int): Start time of the build
-      table_name_bq (str): Name of table in BigQuery to which metrics data will be uploaded
+      table_id_bq (str): ID of table in BigQuery to which metrics data will be uploaded
     """
-    bigquery_obj = bigquery.ExperimentsGCSFuseBQ('gcs-fuse-test', 'performance_metrics')
-    bigquery_obj.upload_metrics_to_table(table_name_bq, config_id, start_time_build, metrics_data)
+    bigquery_obj = bigquery.ExperimentsGCSFuseBQ(constants.PROJECT_ID, constants.DATASET_ID)
+    bigquery_obj.upload_metrics_to_table(table_id_bq, config_id, start_time_build, metrics_data)
 
 if __name__ == '__main__':
   argv = sys.argv
@@ -490,4 +490,3 @@ if __name__ == '__main__':
   fio_metrics_obj = FioMetrics()
   temp = fio_metrics_obj.get_metrics(argv[1])
   print(temp)
-

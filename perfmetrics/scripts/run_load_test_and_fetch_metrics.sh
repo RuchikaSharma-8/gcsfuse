@@ -3,6 +3,7 @@ set -e
 echo "Mounting gcs bucket"
 mkdir -p gcs
 GCSFUSE_FLAGS=$1
+UPLOAD_FLAGS=$2
 BUCKET_NAME=periodic-perf-tests
 MOUNT_POINT=gcs
 # The VM will itself exit if the gcsfuse mount fails.
@@ -18,8 +19,6 @@ sudo umount $MOUNT_POINT
 echo Installing requirements..
 pip install --require-hashes -r requirements.txt --user
 gsutil cp gs://periodic-perf-tests/creds.json gsheet
-
-UPLOAD_FLAGS=$2
 
 echo Fetching results..
 python3 fetch_metrics.py fio-output.json "$UPLOAD_FLAGS"
