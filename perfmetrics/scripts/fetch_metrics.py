@@ -51,15 +51,15 @@ def _parse_arguments(argv):
   parser.add_argument(
       '--config_id',
       help='Configuration ID of the experiment',
-      action='store',
-      nargs=1,
+      action='store_true',
+      nargs='?',
       required=False,
   )
   parser.add_argument(
       '--start_time_build',
       help='Start time of the build.',
-      action='store',
-      nargs=1,
+      action='store_true',
+      nargs='?',
       required=False,
   )
   return parser.parse_args(argv[1:])
