@@ -36,6 +36,7 @@ RECEIVED_BYTES_COUNT_METRIC_TYPE = 'compute.googleapis.com/instance/network/rece
 OPS_LATENCY_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_latency'
 READ_BYTES_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/gcs/read_bytes_count'
 OPS_ERROR_COUNT_METRIC_TYPE = 'custom.googleapis.com/gcsfuse/fs/ops_error_count'
+RAM_UTI_METRIC_TYPE = 'agent.googleapis.com/memory/percent_used'
 
 @dataclasses.dataclass
 class MetricPoint:
@@ -80,9 +81,18 @@ OPS_ERROR_COUNT = Metric(
     reducer='REDUCE_SUM',
     group_fields=['metric.labels'])
 
+RAM_UTI_PEAK = Metric(
+    metric_type=RAM_UTI_METRIC_TYPE, factor=1, aligner='ALIGN_MAX')
+RAM_UTI_MEAN = Metric(
+    metric_type=RAM_UTI_METRIC_TYPE, factor=1, aligner='ALIGN_MEAN')
+
 METRICS_LIST = [
     CPU_UTI_PEAK, CPU_UTI_MEAN, REC_BYTES_PEAK, REC_BYTES_MEAN,
     READ_BYTES_COUNT, OPS_ERROR_COUNT
+]
+
+NEW_METRICS_LIST = [
+    RAM_UTI_PEAK, RAM_UTI_MEAN
 ]
 
 # List of VM metrics extracted for listing tests
@@ -98,7 +108,7 @@ def _parse_metric_value_by_type(value, value_type) -> float:
 
     Args:
       value (object): The value object from API response
-      value_type (int) : Integer representing the value type of the object, refer 
+      value_type (int) : Integer representing the value type of the object, refer
                         https://cloud.google.com/monitoring/api/ref_v3/rest/v3/TypedValue.
   """
   if value_type == 1:
@@ -126,13 +136,17 @@ def _get_metric_filter(type, metric_type, instance, extra_filter):
     metric_filter = (
         'metric.type = "{metric_type}" AND metric.label.instance_name '
         '={instance_name}').format(
-            metric_type=metric_type, instance_name=instance)
+        metric_type=metric_type, instance_name=instance)
   elif (type == 'custom'):
     metric_filter = (
         'metric.type = "{metric_type}" AND metric.labels.opencensus_task = '
         'ends_with("{instance_name}")').format(
-            metric_type=metric_type, instance_name=instance)
-
+        metric_type=metric_type, instance_name=instance)
+  elif (type == 'agent'):
+    metric_filter = (
+        'metric.type = "{metric_type}" AND metric.label.state = '
+        'ends_with("used")').format(
+        metric_type=metric_type)
   if (extra_filter == ''):
     return metric_filter
   return '{} AND {}'.format(metric_filter, extra_filter)
@@ -210,6 +224,9 @@ class VmMetrics:
     elif (metric.metric_type[0:6] == 'custom'):
       metric_filter = _get_metric_filter('custom', metric.metric_type, instance,
                                          metric.extra_filter)
+    elif (metric.metric_type[0:5] == 'agent'):
+      metric_filter = _get_metric_filter('agent', metric.metric_type, instance,
+                                         metric.extra_filter)
     else:
       raise Exception('Unhandled metric type')
 
@@ -221,7 +238,7 @@ class VmMetrics:
           'view': monitoring_v3.ListTimeSeriesRequest.TimeSeriesView.FULL,
           'aggregation': aggregation,
       })
-      
+
     except:
       raise GoogleAPICallError(('The request for API response of {} failed.'
                                 ).format(metric.metric_type))
@@ -229,7 +246,7 @@ class VmMetrics:
     return metrics_response
 
   def _get_metrics(self, start_time_sec, end_time_sec, instance, period,
-                   metric):
+      metric):
     """Returns the MetricPoint list for requested metric type.
 
     Args:
@@ -286,7 +303,7 @@ class VmMetrics:
         aligner='ALIGN_DELTA')
 
     updated_metrics_list.append(ops_latency_mean)
-
+    updated_metrics_list = updated_metrics_list + list(NEW_METRICS_LIST)
     return updated_metrics_list
 
   def fetch_metrics(self, start_time_sec, end_time_sec, instance, period, test_type):
@@ -335,8 +352,8 @@ class VmMetrics:
     return metrics_data
 
   def fetch_metrics_and_write_to_google_sheet(self, start_time_sec,
-                                              end_time_sec, instance, period,
-                                              test_type, worksheet_name):
+      end_time_sec, instance, period,
+      test_type, worksheet_name):
     """Fetches the metrics data for all types and writes to a google sheet.
 
     Args:
